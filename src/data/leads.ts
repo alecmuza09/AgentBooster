@@ -71,11 +71,15 @@ export const exampleLeads: Lead[] = [
     timeline: [
         { id: 't4-1', type: 'meeting', date: formatISO(subDays(now, 20)), notes: 'Conocido en evento, interesado en seguro de vida.', actor: 'Carlos Marín' },
         { id: 't4-2', type: 'status_change', date: formatISO(subDays(now, 20)), notes: 'Estado cambiado a Contactado', actor: 'Carlos Marín', newStatus: 'contacted' },
-        { id: 't4-3', type: 'email', date: formatISO(subDays(now, 15)), notes: 'Envío de propuesta detallada.', actor: 'Carlos Marín' },
-        { id: 't4-4', type: 'status_change', date: formatISO(subDays(now, 15)), notes: 'Estado cambiado a Propuesta Enviada', actor: 'Carlos Marín', newStatus: 'proposal_sent' },
+        { id: 't4-3', type: 'note', date: formatISO(subDays(now, 18)), notes: 'Cliente solicitó ajuste en cobertura de GMM.', actor: 'Carlos Marín' },
+        { id: 't4-4', type: 'email', date: formatISO(subDays(now, 16)), notes: 'Email enviado con la propuesta ajustada.', actor: 'Carlos Marín' },
+        { id: 't4-5', type: 'status_change', date: formatISO(subDays(now, 15)), notes: 'Estado cambiado a Propuesta Trabajada', actor: 'Carlos Marín', newStatus: 'proposal_sent' },
     ],
     potentialValue: 50000,
     interestLevel: 'high',
+    documents: [
+      { id: 'd4-1', name: 'Propuesta_GMM_Miguel_Torres.pdf', url: '#', uploadedAt: formatISO(subDays(now, 16)) },
+    ],
   },
   {
     id: 'lead5',

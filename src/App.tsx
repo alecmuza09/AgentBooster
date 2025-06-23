@@ -1,58 +1,74 @@
-import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import React, { Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Layout } from './components/Layout';
-import { Dashboard } from './pages/Dashboard';
-import { Clients } from './pages/Clients.tsx';
-import { ProspectsKanban } from './pages/ProspectsKanban';
-import { Policies } from './pages/Policies.tsx';
-import { Documents } from './pages/Documents';
-import { Learning } from './pages/Learning';
-import { Reports } from './pages/Reports';
-import { AuthProvider } from './contexts/AuthContext';
-import { useApplyTheme } from './stores/themeStore';
-import { Email } from './pages/Email.tsx';
-import Marketing from './pages/Marketing.tsx';
+import Login from './pages/Login';
+import SignUp from './pages/SignUp';
+import ProtectedRoute from './components/ProtectedRoute';
 import { LoadingSpinner } from './components/LoadingSpinner';
-import ProtectedRoute from './components/ProtectedRoute.tsx';
 
-// --- Pages (Lazy Loaded) ---
-const Login = lazy(() => import('./pages/Login.tsx'));
-const Settings = lazy(() => import('./pages/Settings.tsx'));
-const Leads = lazy(() => import('./pages/Leads.tsx'));
+// Lazy load de las páginas para optimizar la carga inicial
+const Dashboard = React.lazy(() => import('./pages/Dashboard').then(module => ({ default: module.Dashboard })));
+const Leads = React.lazy(() => import('./pages/Leads'));
+const Clients = React.lazy(() => import('./pages/Clients').then(module => ({ default: module.Clients })));
+const Policies = React.lazy(() => import('./pages/Policies').then(module => ({ default: module.Policies })));
+const Reports = React.lazy(() => import('./pages/Reports').then(module => ({ default: module.Reports })));
+const Marketing = React.lazy(() => import('./pages/Marketing'));
+const Email = React.lazy(() => import('./pages/Email').then(module => ({ default: module.Email })));
+const Documents = React.lazy(() => import('./pages/Documents').then(module => ({ default: module.Documents })));
+const Learning = React.lazy(() => import('./pages/Learning').then(module => ({ default: module.Learning })));
+const Settings = React.lazy(() => import('./pages/Settings'));
+const Finanzas360 = React.lazy(() => import('./pages/Finanzas360'));
+
 
 function App() {
-  useApplyTheme();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
 
   return (
-    <AuthProvider>
-      <Router>
-        <Suspense fallback={<Layout><LoadingSpinner /></Layout>}>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-
-            {/* Rutas Protegidas */}
-            <Route element={<ProtectedRoute><Layout><Outlet /></Layout></ProtectedRoute>}>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/clients" element={<Clients />} />
-              <Route path="/prospects" element={<ProspectsKanban />} />
-              <Route path="/policies" element={<Policies />} />
-              <Route path="/documents" element={<Documents />} />
-              <Route path="/learning" element={<Learning />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/email" element={<Email />} />
-              <Route path="/marketing" element={<Marketing />} />
-              <Route path="/leads" element={<Leads />} />
-              <Route path="/settings" element={<Settings />} />
-            </Route>
-
-            {/* Ruta Catch-all (opcional - 404) */}
-            {/* <Route path="*" element={<NotFound />} /> */}
-          </Routes>
-        </Suspense>
-      </Router>
-    </AuthProvider>
+    <Suspense fallback={<LoadingSpinner />}>
+      <Routes>
+        <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
+        <Route path="/signup" element={!user ? <SignUp /> : <Navigate to="/" />} />
+        <Route 
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Routes>
+                  <Route index element={<Dashboard />} />
+                  <Route path="leads" element={<Leads />} />
+                  <Route path="clients" element={<Clients />} />
+                  <Route path="policies" element={<Policies />} />
+                  <Route path="documents" element={<Documents />} />
+                  <Route path="reports" element={<Reports />} />
+                  <Route path="learning" element={<Learning />} />
+                  <Route path="email" element={<Email />} />
+                  <Route path="marketing" element={<Marketing />} />
+                  <Route path="finanzas-360" element={<Finanzas360 />} />
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="*" element={<Navigate to="/" />} /> 
+                </Routes>
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </Suspense>
   );
 }
 
-export default App;
+function AppWrapper() {
+  return (
+    <Router>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </Router>
+  );
+}
+
+export default AppWrapper;

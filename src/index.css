@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.btn-primary {
+    @apply bg-blue-600 text-white font-semibold rounded-lg shadow-md;
+    @apply hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+    @apply disabled:bg-gray-400 disabled:cursor-not-allowed;
+    @apply transition-colors duration-200 ease-in-out;
+    @apply px-4 py-2 text-sm;
+}
+
+.btn-secondary {
+    @apply bg-gray-200 text-gray-700 font-semibold rounded-lg;
+}

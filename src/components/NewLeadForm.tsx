@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import clsx from 'clsx';
 import { LeadStatus, LeadTimelineEntry, Lead } from '../types/lead';
 import { formatISO } from 'date-fns';
+import { supabase } from '../supabaseClient';
+import { useAuth } from '../contexts/AuthContext';
 
 // Mover leadStatusConfig aquí para que esté disponible globalmente en el archivo
 const leadStatusConfig: Record<LeadStatus, { label: string; /* icon?: React.ElementType; */ colorClasses?: string }> = {
@@ -115,14 +117,14 @@ const newLeadSchema = z.object({
 type NewLeadFormData = z.infer<typeof newLeadSchema>;
 
 interface NewLeadFormProps {
-  onSubmit: (data: Lead) => void; // Debería enviar un objeto Lead completo
+  onLeadCreated: (newLead: Lead) => void;
   onClose: () => void;
-  // Lista de asesores para el select
-  advisors?: { id: string; name: string }[]; 
 }
 
 // --- Componente Principal del Formulario ---
-export const NewLeadForm: React.FC<NewLeadFormProps> = ({ onSubmit, onClose, advisors = [] }) => {
+export const NewLeadForm: React.FC<NewLeadFormProps> = ({ onLeadCreated, onClose }) => {
+    const { user } = useAuth();
+    const [name, setName] = useState('');
     const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<NewLeadFormData>({
         resolver: zodResolver(newLeadSchema),
         defaultValues: {
@@ -130,44 +132,31 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ onSubmit, onClose, adv
         }
     });
 
-    const handleFormSubmit = (data: NewLeadFormData) => {
-        const now = formatISO(new Date());
-        const newLeadEntry: Lead = {
-            id: `lead_${Date.now()}`,
-            createdAt: now,
-            lastContactDate: undefined, // Al crear, no hay contacto previo por defecto
-            nextActionDate: undefined,
-            timeline: [],
-            ...data, // Los campos del formulario
-            // Asegurar que los campos opcionales que no están en el form pero sí en Lead sean undefined o valor por defecto
-            email: data.email || undefined,
-            phone: data.phone || undefined,
-            source: data.source || undefined,
-            assignedAdvisor: data.assignedAdvisor || undefined,
-            potentialValue: data.potentialValue || undefined,
-            interestLevel: data.interestLevel || undefined,
-        };
-
-        if (data.initialNote) {
-            newLeadEntry.timeline?.push({
-                id: `time_${Date.now()}`,
-                date: now,
-                type: 'note',
-                notes: data.initialNote,
-                actor: data.assignedAdvisor || 'Sistema', // O el usuario actual
-            });
+    const handleFormSubmit = async (formData: NewLeadFormData) => {
+        if (!user) {
+            console.error("Usuario no autenticado, no se puede crear el lead.");
+            return;
         }
-        // Primera entrada al timeline indicando creación y estado inicial
-        newLeadEntry.timeline?.unshift({
-            id: `time_create_${Date.now()}`,
-            date: now,
-            type: 'status_change',
-            notes: `Prospecto creado. Estado inicial: ${leadStatusConfig[newLeadEntry.status]?.label || newLeadEntry.status}`,
-            actor: 'Sistema',
-            newStatus: newLeadEntry.status,
-        });
 
-        onSubmit(newLeadEntry);
+        const { data: newLeadData, error: insertError } = await supabase
+            .from('prospects')
+            .insert({
+                name: formData.fullName,
+                email: formData.email,
+                phone: formData.phone,
+                status: 'No Contactado',
+                agent_id: user.id,
+            })
+            .select()
+            .single();
+
+        if (insertError) {
+            console.error(`Error al crear el lead: ${insertError.message}`);
+            // Aquí podrías manejar el error en la UI, ej: setError('...')
+        } else if (newLeadData) {
+            onLeadCreated(newLeadData as Lead);
+            onClose(); // Cierra el modal después de crear
+        }
     };
 
     const exampleAdvisors = [
@@ -212,7 +201,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ onSubmit, onClose, adv
                     name="assignedAdvisor" 
                     control={control} 
                     errors={errors} 
-                    options={advisors.length > 0 ? advisors.map(a => ({value: a.name, label: a.name})) : exampleAdvisors.map(a => ({ value: a.name, label: a.name }))} 
+                    options={exampleAdvisors.map(a => ({ value: a.name, label: a.name }))} 
                     placeholder="Seleccionar asesor..." 
                     isOptional={true} 
                 />
@@ -244,19 +233,18 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ onSubmit, onClose, adv
 
             <div className="flex justify-end gap-3 pt-5 border-t border-gray-200 dark:border-gray-700">
                 <button
-                    type="button"
-                    onClick={onClose}
-                    disabled={isSubmitting}
-                    className="btn-secondary px-4 py-2"
-                >
-                    Cancelar
-                </button>
-                <button
                     type="submit"
                     disabled={isSubmitting}
                     className="btn-primary px-4 py-2 flex items-center"
                 >
                     {isSubmitting ? 'Guardando...' : 'Guardar Prospecto'}
+                </button>
+                <button
+                    type="reset"
+                    onClick={onClose}
+                    className="btn-secondary px-4 py-2 flex items-center"
+                >
+                    Cancelar
                 </button>
             </div>
         </form>

@@ -1,11 +1,8 @@
 // Estados posibles para un prospecto
-export type LeadStatus = 
-  | 'not_contacted'   // Nuevo, sin interacción
-  | 'contacted'       // Se estableció un primer contacto (llamada, email, etc.)
-  | 'appointment_set' // Se agendó una cita o reunión
-  | 'proposal_sent'   // Se envió una cotización o propuesta formal
-  | 'converted'       // Se convirtió en cliente (se contrató una póliza)
-  | 'lost';           // Se perdió el interés o eligió otra opción
+export type LeadStatus = 'No Contactado' | 'Contactado' | 'Cita Agendada' | 'Propuesta Trabajada' | 'Convertido' | 'Perdido';
+
+export type LeadSortField = 'name' | 'status' | 'last_contact_date' | 'created_at';
+export type SortDirection = 'asc' | 'desc';
 
 // Tipo para una entrada en el historial/timeline del prospecto
 export interface LeadTimelineEntry {
@@ -17,19 +14,29 @@ export interface LeadTimelineEntry {
   newStatus?: LeadStatus; // Si fue un cambio de estado
 }
 
+export interface LeadDocument {
+  id: string;
+  name: string;
+  url: string;
+  uploadedAt: string;
+}
+
 // Interfaz principal para un Prospecto (Lead)
 export interface Lead {
   id: string;
-  fullName: string;
+  name: string;
   email?: string;
   phone?: string;
   status: LeadStatus;
+  agent_id?: string;
+  created_at: string;
+  last_contact_date?: string;
+  fullName: string;
   source?: string; // Origen (Referido, Web, Evento, etc.)
   assignedAdvisor?: string; // Asesor asignado
-  lastContactDate?: string; // Fecha ISO 8601 del último contacto
   nextActionDate?: string; // Fecha ISO 8601 para la próxima acción planeada (seguimiento, cita)
-  createdAt: string; // Fecha ISO 8601 de creación
   potentialValue?: number; // Valor estimado (opcional)
   interestLevel?: 'low' | 'medium' | 'high'; // Nivel de interés (opcional)
   timeline?: LeadTimelineEntry[]; // Historial de interacciones
+  documents?: LeadDocument[]; // Añadido para soportar documentos adjuntos
 } 

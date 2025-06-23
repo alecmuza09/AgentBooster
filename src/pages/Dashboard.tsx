@@ -4,7 +4,7 @@ import {
     Users, FileText, AlertCircle, TrendingUp, LucideIcon,
     PlusCircle, UploadCloud, FilePlus, Bell, CheckCircle, XCircle,
     UserCheck, CalendarCheck, BarChartHorizontal, Search, Filter,
-    Eye, Mail, Trash, UserCircle // Añadir icono para actor
+    Eye, Mail, Trash, UserCircle, DollarSign // Añadir icono para actor
 } from 'lucide-react';
 import clsx from 'clsx';
 import { format, formatDistanceToNowStrict } from 'date-fns'; // Añadir formatDistanceToNowStrict
@@ -13,7 +13,6 @@ import { es } from 'date-fns/locale'; // Usar locale completo
 // Importar datos de ejemplo (Actualizado)
 import { examplePolicies } from '../data/policies';
 import { Policy } from '../types/policy';
-import { exampleClients, Client } from '../pages/Clients'; // Asumiendo que Client se exporta de Clients
 
 // --- Tipos y Datos de Ejemplo (Actualizados) ---
 type ActivityType = 'policy' | 'document' | 'payment_received' | 'payment_pending' | 'renewal_alert' | 'task';
@@ -52,18 +51,12 @@ const exampleActivities: ActivityItemData[] = [
   { id: 't2', type: 'task', title: 'Enviar Documentación', description: 'Póliza #AUT789123', timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000), clientName: 'Juan Pérez', actor: 'Asesor A', dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) }, // Vence en 5 días
 ];
 
-// Simulación de datos de Ingresos
-interface RevenueData {
-    agent: string;
-    type: string;
-    amount: number;
-}
-const exampleRevenue: RevenueData[] = [
+// Simulación de datos de Primas Vendidas
+const salesData = [
     { agent: 'Ana López', type: 'Vida', amount: 15000 },
     { agent: 'Carlos Marín', type: 'Auto', amount: 8500 },
-    { agent: 'Ana López', type: 'GMM', amount: 12000 },
-    { agent: 'Carlos Marín', type: 'Vida', amount: 7000 },
-    { agent: 'Ana López', type: 'Auto', amount: 5500 },
+    { agent: 'Sofía Reyes', type: 'Vida', amount: 22000 },
+    { agent: 'Javier Peña', type: 'Gastos Médicos', amount: 12000 },
 ];
 
 // --- Componentes Reutilizables Adaptados a Dark Mode ---
@@ -228,21 +221,22 @@ export const Dashboard = () => {
             .sort((a, b) => a.dueDate!.getTime() - b.dueDate!.getTime());
     }, [exampleActivities]);
 
-    // --- Agregación de Ingresos Simulados ---
-    const revenueByAgent = useMemo(() => {
-        return exampleRevenue.reduce((acc, item) => {
+    // --- Agregación de Primas Vendidas Simuladas ---
+    const totalSales = salesData.reduce((acc, sale) => acc + sale.amount, 0);
+    
+    const salesByAgent = useMemo(() => {
+        return salesData.reduce((acc, item) => {
             acc[item.agent] = (acc[item.agent] || 0) + item.amount;
             return acc;
         }, {} as Record<string, number>);
-    }, [exampleRevenue]);
+    }, [salesData]);
 
-    const revenueByType = useMemo(() => {
-        return exampleRevenue.reduce((acc, item) => {
+    const salesByType = useMemo(() => {
+        return salesData.reduce((acc, item) => {
             acc[item.type] = (acc[item.type] || 0) + item.amount;
             return acc;
         }, {} as Record<string, number>);
-    }, [exampleRevenue]);
-
+    }, [salesData]);
 
     const filteredActivities = useMemo(() => {
         // Incluir búsqueda por actor
@@ -336,9 +330,9 @@ export const Dashboard = () => {
                     note={upcomingTasks.length > 0 ? 'Ver detalles abajo' : 'Sin tareas próximas'}
                  />
                  <StatCard
-                     title="Ingresos Totales (Simulado)"
-                     value={`$${Object.values(revenueByAgent).reduce((sum, val) => sum + val, 0).toLocaleString()}`}
-                     icon={TrendingUp}
+                     title="Primas Vendidas Totales (Simulado)"
+                     value={`$${totalSales.toLocaleString()}`}
+                     icon={DollarSign}
                      note="Datos de ejemplo"
                  />
             </div>
@@ -397,13 +391,13 @@ export const Dashboard = () => {
                     </div>
                 </div>
 
-                {/* 4. Reporte de Ingresos Simulados */}
+                {/* 4. Reporte de Primas Vendidas Simuladas */}
                 <div className="lg:col-span-1 space-y-6">
                     <div>
-                        <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Ingresos por Agente (Simulado)</h2>
+                        <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Primas Vendidas por Agente (Simulado)</h2>
                         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
                             <ul className="space-y-2 text-sm">
-                                {Object.entries(revenueByAgent).sort(([, a], [, b]) => b - a).map(([agent, amount]) => (
+                                {Object.entries(salesByAgent).sort(([, a], [, b]) => b - a).map(([agent, amount]) => (
                                     <li key={agent} className="flex justify-between items-center">
                                         <span className="text-gray-700 dark:text-gray-300">{agent}</span>
                                         <span className="font-medium text-gray-900 dark:text-white">${amount.toLocaleString()}</span>
@@ -413,10 +407,10 @@ export const Dashboard = () => {
                         </div>
                     </div>
                     <div>
-                         <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Ingresos por Tipo Seguro (Simulado)</h2>
+                         <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Primas Vendidas por Tipo Seguro (Simulado)</h2>
                          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
                             <ul className="space-y-2 text-sm">
-                                {Object.entries(revenueByType).sort(([, a], [, b]) => b - a).map(([type, amount]) => (
+                                {Object.entries(salesByType).sort(([, a], [, b]) => b - a).map(([type, amount]) => (
                                     <li key={type} className="flex justify-between items-center">
                                         <span className="text-gray-700 dark:text-gray-300">{type}</span>
                                         <span className="font-medium text-gray-900 dark:text-white">${amount.toLocaleString()}</span>

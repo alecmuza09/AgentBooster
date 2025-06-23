@@ -1,14 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Download,
   Filter, 
   LineChart,
-  PieChart,
   Calendar,
   TrendingUp,
   TrendingDown,
-  Search
+  Search,
+  AlertCircle,
+  ShieldCheck,
+  Building
 } from 'lucide-react';
+import { ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend, Tooltip } from 'recharts';
+import { useAuth } from '../contexts/AuthContext';
+import { createClient } from '@supabase/supabase-js';
+import clsx from 'clsx';
 
 interface ReportMetric {
   label: string;
@@ -22,7 +28,55 @@ interface ChartData {
   values: number[];
 }
 
+// --- Componente de Alerta de Cédula ---
+const LicenseStatusCard = ({ profile }) => {
+    if (!profile) return <div>Cargando información de la cédula...</div>;
+
+    const { cedula_type, cedula_expiration_date, agencia } = profile;
+    if (!cedula_expiration_date) {
+        return (
+            <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg text-center">
+                <p className="font-semibold">No hay datos de cédula registrados.</p>
+                <p className="text-sm text-gray-500">Por favor, actualiza tu perfil.</p>
+            </div>
+        );
+    }
+
+    const today = new Date();
+    const expirationDate = new Date(cedula_expiration_date);
+    const daysUntilExpiration = Math.ceil((expirationDate - today) / (1000 * 60 * 60 * 24));
+
+    let status = {
+        text: 'Vigente',
+        color: 'green',
+        icon: <ShieldCheck className="w-10 h-10" />
+    };
+    if (daysUntilExpiration <= 0) {
+        status = { text: 'Vencida', color: 'red', icon: <AlertCircle className="w-10 h-10" /> };
+    } else if (daysUntilExpiration <= 30) {
+        status = { text: 'Por Vencer', color: 'yellow', icon: <AlertCircle className="w-10 h-10" /> };
+    }
+    
+    return (
+        <div className={clsx("p-6 rounded-lg shadow-lg text-white", `bg-${status.color}-500`)}>
+            <div className="flex items-center gap-4">
+                {status.icon}
+                <div>
+                    <p className="font-bold text-2xl">{status.text}</p>
+                    <p className="text-sm opacity-90">Tu cédula tipo '{cedula_type}' vence el {expirationDate.toLocaleDateString()}</p>
+                </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-white/20 text-sm">
+                <p className="flex items-center gap-2"><Building className="w-4 h-4" /> Agencia: <strong>{agencia || 'No especificada'}</strong></p>
+                <p className="flex items-center gap-2 mt-1"><Calendar className="w-4 h-4" /> Tienes <strong>{daysUntilExpiration > 0 ? daysUntilExpiration : 0} días</strong> para renovarla.</p>
+            </div>
+        </div>
+    );
+};
+
 export const Reports = () => {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState('month');
 
@@ -65,8 +119,40 @@ export const Reports = () => {
     values: [35, 25, 20, 15, 5]
   };
 
+  const policyData: ChartData = {
+    labels: ['Vida', 'Auto', 'Hogar', 'Salud', 'Negocio'],
+    values: [35, 25, 20, 15, 5]
+  };
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) console.error("Error cargando el perfil:", error);
+        else setProfile(data);
+      }
+    };
+    fetchProfile();
+  }, [user]);
+
+  // ... (datos de ejemplo para gráficas)
+  const salesData = [
+    { name: 'Primas de Vida', value: 400 },
+    { name: 'Primas de Auto', value: 300 },
+    { name: 'Primas de GMM', value: 300 },
+    { name: 'Primas de Daños', value: 200 },
+  ];
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 p-4 md:p-6">
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Reportes y Cumplimiento</h1>
+      
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-gray-900">Reportes</h1>
         <div className="flex gap-4">
@@ -86,6 +172,9 @@ export const Reports = () => {
           </button>
         </div>
       </div>
+
+      {/* Nueva Sección de Cédula */}
+      <LicenseStatusCard profile={profile} />
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -206,6 +295,34 @@ export const Reports = () => {
           ))}
         </div>
       </div>
+
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Primas Vendidas por Ramo</h2>
+        <div className="h-72 mt-4">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={salesData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+               <Bar dataKey="value" fill="#8884d8" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Distribución de Cartera</h2>
+        <div className="h-72 mt-4">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={salesData} cx="50%" cy="50%" labelLine={false} outerRadius={100} fill="#8884d8" dataKey="value" nameKey="name" label>
+                {salesData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </div>
   );
 };
+
+export default Reports;

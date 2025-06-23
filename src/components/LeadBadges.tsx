@@ -2,7 +2,7 @@ import React from 'react';
 import clsx from 'clsx';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import {
-    Clock, Phone, Mail, CalendarClock, Handshake, CircleSlash, AlertCircle 
+    Clock, Phone, Mail, CalendarClock, Handshake, CircleSlash, AlertCircle, Sparkles, Star, Users, Award, XCircle 
 } from 'lucide-react';
 import { LeadStatus } from '../types/lead';
 
@@ -11,7 +11,7 @@ export const leadStatusConfig: Record<LeadStatus, { label: string; icon: React.E
   not_contacted: { label: 'No Contactado', icon: Clock, colorClasses: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' },
   contacted: { label: 'Contactado', icon: Phone, colorClasses: 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400' },
   appointment_set: { label: 'Cita Agendada', icon: CalendarClock, colorClasses: 'bg-purple-100 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400' },
-  proposal_sent: { label: 'Propuesta Enviada', icon: Mail, colorClasses: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400' },
+  proposal_sent: { label: 'Propuesta Trabajada', icon: Mail, colorClasses: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400' },
   converted: { label: 'Convertido', icon: Handshake, colorClasses: 'bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400' },
   lost: { label: 'Perdido', icon: CircleSlash, colorClasses: 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400' },
 };

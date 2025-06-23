@@ -1,20 +1,22 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
+  Briefcase,
   FileText,
-  FolderOpen,
-  BarChart3,
-  LogOut,
-  Building2,
-  Bell,
+  Shield,
   BookOpen,
-  Filter as FilterIcon,
+  Settings,
+  LineChart,
   Mail,
   Megaphone,
-  UsersRound
+  CircleDollarSign,
+  LogOut,
+  Building2,
+  Bell
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 import clsx from 'clsx';
 
@@ -23,6 +25,36 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const { signOut, profile } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login', { replace: true });
+  };
+
+  const getInitials = (name: string | undefined) => {
+    if (!name) return 'U';
+    const names = name.split(' ');
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const navItems = [
+    { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
+    { href: '/leads', icon: Briefcase, label: 'Leads' },
+    { href: '/clients', icon: Users, label: 'Clientes' },
+    { href: '/policies', icon: FileText, label: 'Pólizas' },
+    { href: '/documents', icon: Shield, label: 'Documentos' },
+    { href: '/reports', icon: LineChart, label: 'Reportes' },
+    { href: '/learning', icon: BookOpen, label: 'Aprendizaje' },
+    { href: '/email', icon: Mail, label: 'Correo' },
+    { href: '/marketing', icon: Megaphone, label: 'Marketing' },
+    { href: '/finanzas-360', icon: CircleDollarSign, label: 'Finanzas 360' },
+  ];
+
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Sidebar - Estilos adaptados para claro/oscuro */}
@@ -45,20 +77,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Navegación */}
         <nav className="p-4 flex-grow overflow-y-auto">
           <ul className="space-y-1.5">
-            {[ // Array para simplificar NavLinks repetitivos
-              { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-              { to: "/clients", icon: Users, label: "Clientes" },
-              { to: "/leads", icon: UsersRound, label: "Prospectos" },
-              { to: "/policies", icon: FileText, label: "Pólizas" },
-              { to: "/documents", icon: FolderOpen, label: "Documentos" },
-              { to: "/learning", icon: BookOpen, label: "Aprendizaje" },
-              { to: "/reports", icon: BarChart3, label: "Reportes" },
-              { to: "/email", icon: Mail, label: "Correo" },
-              { to: "/marketing", icon: Megaphone, label: "Marketing" },
-            ].map(({ to, icon: Icon, label }) => (
-              <li key={to}>
+            {navItems.map(({ href, icon: Icon, label }) => (
+              <li key={href}>
                 <NavLink
-                  to={to}
+                  to={href}
                   end // Asegura que solo la ruta exacta esté activa (para Dashboard)
                   className={({ isActive }) =>
                     clsx(
@@ -83,8 +105,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
              "border-gray-200", // Claro
              "dark:border-gray-700" // Oscuro
          )}>
-          <button className={clsx(
-              "flex w-full items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-150 text-sm font-medium",
+          <button 
+            onClick={handleLogout}
+            className={clsx(
+              "flex w-full items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-150 text-sm font-medium cursor-pointer",
               "text-gray-600 hover:bg-gray-100 hover:text-gray-900", // Claro
               "dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white" // Oscuro
            )}>
@@ -114,10 +138,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </button>
             {/* Avatar y Nombre */} 
              <div className="flex items-center gap-2 cursor-pointer">
-                <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold text-sm">
-                   JD
-                 </div>
-                 <span className="text-sm font-medium text-gray-700 dark:text-gray-200 hidden md:block">John Doe</span>
+                <div className="w-8 h-8 bg-primary/20 dark:bg-primary-dark/30 rounded-full flex items-center justify-center text-primary dark:text-primary-dark font-semibold text-sm">
+                  {getInitials(profile?.full_name)}
+                </div>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-200 hidden md:block">
+                  {profile?.full_name || 'Agente'}
+                </span>
              </div>
            </div>
          </header>

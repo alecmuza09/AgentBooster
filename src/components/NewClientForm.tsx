@@ -150,9 +150,28 @@ export const NewClientForm: React.FC<NewClientFormProps> = ({ onSubmit, onClose 
     }
   });
 
-  const handleFormSubmit = (data: ClientFormData) => {
-    console.log("Form Data Submitted (Simplified):", data);
-    onSubmit(data);
+  const handleFormSubmit = async (data: ClientFormData) => {
+    console.log("Form Data to be sent:", data);
+    try {
+      const response = await fetch('/api/clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error('La respuesta del servidor no fue exitosa');
+      }
+
+      const newClient = await response.json();
+      console.log("Cliente guardado en el servidor:", newClient);
+      onSubmit(data); // Puedes pasar el cliente completo si lo necesitas
+    } catch (error) {
+      console.error("Error al guardar el cliente:", error);
+      // Aquí podrías mostrar un mensaje de error al usuario
+    }
   };
 
   return (
