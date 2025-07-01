@@ -97,6 +97,28 @@
       "name": "Manufacturas del Centro",
       "lastInteraction": "Decidió ir con competidor",
       "stage": "lost"
+    },
+    {
+      "name": "alec muza",
+      "email": "alecmuza@hotmail.com",
+      "phone": "8114138917",
+      "source": "Ana López",
+      "potential_value": 30000,
+      "interest_level": "Medio",
+      "notes": "",
+      "id": "p1750814502205",
+      "stage": "no_contacted"
+    },
+    {
+      "name": "alec muza",
+      "email": "alecmuza@alecmuza.com",
+      "phone": "8114138917",
+      "source": "Ana López",
+      "potential_value": 35000,
+      "interest_level": "Bajo",
+      "notes": "",
+      "id": "p1750862810509",
+      "stage": "no_contacted"
     }
   ]
 }

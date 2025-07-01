@@ -1,21 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Search } from 'lucide-react';
 import { Modal } from '../components/Modal';
-import NewClientForm from '../components/NewClientForm';
-import { Client, ClientStatus } from '../types/client';
-import { exampleClients } from '../data/clients';
+import { NewClientForm } from '../components/NewClientForm';
+import { Client } from '../types/client';
+import { supabase } from '../supabaseClient';
+import { useAuth } from '../contexts/AuthContext';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
-// Componentes pequeños y helpers se pueden mantener si no tienen lógica compleja
-const StatusBadge: React.FC<{ status: ClientStatus }> = ({ status }) => {
-    const config = {
-        active: { text: 'Activo', color: 'green' },
-        inactive: { text: 'Inactivo', color: 'gray' },
-        prospect: { text: 'Prospecto', color: 'blue' },
+const StatusBadge: React.FC<{ status: Client['status'] }> = ({ status }) => {
+    const statusConfig = {
+        Activo: { text: 'Activo', className: 'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300' },
+        Inactivo: { text: 'Inactivo', className: 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-300' },
+        Prospecto: { text: 'Prospecto', className: 'bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-300' },
     };
-    const { text, color } = config[status] || { text: 'Desconocido', color: 'gray' };
+    const config = statusConfig[status] || statusConfig.Inactivo;
+
     return (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${color}-100 text-${color}-800`}>
-            {text}
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.className}`}>
+            {config.text}
         </span>
     );
 };
@@ -25,43 +27,46 @@ export const Clients = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-
-    const fetchClients = async () => {
-        setIsLoading(true);
-        try {
-            const response = await fetch('/api/clients');
-            if (!response.ok) {
-                throw new Error('Error al cargar clientes');
-            }
-            const data = await response.json();
-            setClients(data);
-        } catch (error) {
-            console.error(error);
-            setClients(exampleClients); // Cargar datos de ejemplo si falla
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const { user } = useAuth();
 
     useEffect(() => {
-        fetchClients();
-    }, []);
+        const fetchClients = async () => {
+            if (!user) return;
+            setIsLoading(true);
+            try {
+                const { data, error } = await supabase
+                    .from('clients')
+                    .select('*')
+                    .eq('agent_id', user.id)
+                    .order('created_at', { ascending: false });
 
-    const handleClientAdded = () => {
+                if (error) throw error;
+                if (data) setClients(data);
+            } catch (error) {
+                console.error('Error al cargar clientes:', error);
+                // Aquí podrías mostrar una notificación de error al usuario
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchClients();
+    }, [user]);
+
+    const handleClientCreated = (newClient: Client) => {
+        setClients(prevClients => [newClient, ...prevClients]);
         setIsModalOpen(false);
-        fetchClients();
     };
-
-    // Lógica de filtrado simplificada dentro del useMemo
+    
     const filteredClients = useMemo(() => {
         if (!searchTerm) {
             return clients;
         }
         const lowerSearch = searchTerm.toLowerCase();
         return clients.filter(client =>
-            client.name.toLowerCase().includes(lowerSearch) ||
-            client.rfc.toLowerCase().includes(lowerSearch) ||
-            client.email.toLowerCase().includes(lowerSearch)
+            (client.name && client.name.toLowerCase().includes(lowerSearch)) ||
+            (client.rfc && client.rfc.toLowerCase().includes(lowerSearch)) ||
+            (client.email && client.email.toLowerCase().includes(lowerSearch))
         );
     }, [clients, searchTerm]);
 
@@ -104,12 +109,14 @@ export const Clients = () => {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-                                {filteredClients.length > 0 ? (
+                                {isLoading ? (
+                                    <tr><td colSpan={4} className="text-center py-8"><LoadingSpinner /></td></tr>
+                                ) : filteredClients.length > 0 ? (
                                     filteredClients.map((client) => (
-                                        <tr key={client.id}>
+                                        <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{client.name}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{client.rfc}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{client.email}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{client.rfc || 'N/A'}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{client.email || 'N/A'}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                 <StatusBadge status={client.status} />
                                             </td>
@@ -118,7 +125,7 @@ export const Clients = () => {
                                 ) : (
                                     <tr>
                                         <td colSpan={4} className="text-center py-8 text-gray-500 dark:text-gray-400">
-                                            No se encontraron clientes que coincidan con la búsqueda.
+                                            No tienes clientes registrados todavía. ¡Crea el primero!
                                         </td>
                                     </tr>
                                 )}
@@ -128,12 +135,14 @@ export const Clients = () => {
                 )}
             </div>
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Registrar Nuevo Cliente">
-                <NewClientForm
-                    onSubmit={handleClientAdded}
-                    onClose={() => setIsModalOpen(false)}
-                />
-            </Modal>
+            {isModalOpen && (
+                <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Registrar Nuevo Cliente">
+                    <NewClientForm
+                        onClientCreated={handleClientCreated}
+                        onClose={() => setIsModalOpen(false)}
+                    />
+                </Modal>
+            )}
         </div>
     );
 };

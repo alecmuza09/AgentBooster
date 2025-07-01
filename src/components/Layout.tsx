@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -20,11 +20,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 import clsx from 'clsx';
 
-interface LayoutProps {
-  children: React.ReactNode;
-}
-
-export const Layout: React.FC<LayoutProps> = ({ children }) => {
+export const Layout = () => {
   const { signOut, profile } = useAuth();
   const navigate = useNavigate();
 
@@ -55,6 +51,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { href: '/finanzas-360', icon: CircleDollarSign, label: 'Finanzas 360' },
   ];
 
+  const adminNavItems = [
+    { href: '/admin', icon: Settings, label: 'Administración' },
+  ]
+
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Sidebar - Estilos adaptados para claro/oscuro */}
@@ -76,7 +76,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* Navegación */}
         <nav className="p-4 flex-grow overflow-y-auto">
-          <ul className="space-y-1.5">
+          <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Principal</p>
+          <ul className="space-y-1.5 mt-2">
             {navItems.map(({ href, icon: Icon, label }) => (
               <li key={href}>
                 <NavLink
@@ -88,6 +89,29 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       isActive
                         ? "bg-primary/10 text-primary dark:bg-primary-dark/20 dark:text-primary-dark" // Activo: ligero fondo azul, texto azul
                         : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white" // Inactivo: hover sutil
+                    )
+                  }
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  {label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+          
+          {/* Sección de Administración */}
+          <p className="mt-6 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Configuración</p>
+          <ul className="space-y-1.5 mt-2">
+            {adminNavItems.map(({ href, icon: Icon, label }) => (
+              <li key={href}>
+                <NavLink
+                  to={href}
+                  className={({ isActive }) =>
+                    clsx(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-150 text-sm font-medium",
+                      isActive
+                        ? "bg-primary/10 text-primary dark:bg-primary-dark/20 dark:text-primary-dark"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
                     )
                   }
                 >
@@ -150,7 +174,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* Contenido de la Página */} 
         <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>

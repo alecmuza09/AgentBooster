@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import { readDb, writeDb } from '../db';
+import { readDB, writeDB } from '../db';
+import { v4 as uuidv4 } from 'uuid';
 
-export const prospectsRouter = Router();
+const router = Router();
 
 interface Prospect {
     id: string;
@@ -11,59 +12,75 @@ interface Prospect {
 }
 
 // GET /api/prospects
-prospectsRouter.get('/', (req, res) => {
-    const db = readDb();
-    res.json(db.prospects || []);
+router.get('/', async (req, res) => {
+    try {
+        const db = await readDB();
+        res.json(db.prospects || []);
+    } catch (error) {
+        res.status(500).json({ message: 'Error al leer la base de datos de prospectos' });
+    }
 });
 
 // POST /api/prospects
-prospectsRouter.post('/', (req, res) => {
-    const db = readDb();
-    const newProspectData = req.body;
-    const newProspect = { ...newProspectData, id: `p${Date.now()}`, stage: 'no_contacted' };
-    db.prospects.push(newProspect);
-    writeDb(db);
-    console.log('Prospecto añadido:', newProspect);
-    res.status(201).json(newProspect);
+router.post('/', async (req, res) => {
+    try {
+        const db = await readDB();
+        const newProspectData = req.body;
+        const newProspect = { ...newProspectData, id: uuidv4(), stage: 'no_contacted' };
+        
+        db.prospects = db.prospects || [];
+        db.prospects.push(newProspect);
+        
+        await writeDB(db);
+        res.status(201).json(newProspect);
+    } catch (error) {
+        res.status(500).json({ message: 'Error al crear el prospecto' });
+    }
 });
 
 // PUT /api/prospects/:id
-// @ts-ignore
-prospectsRouter.put('/:id', (req, res) => {
-    const db = readDb();
-    const { id } = req.params;
-    const { stage, ...updatedData } = req.body;
-    const prospectIndex = db.prospects.findIndex((p: Prospect) => p.id === id);
+router.put('/:id', async (req, res) => {
+    try {
+        const db = await readDB();
+        const { id } = req.params;
+        const { stage, ...updatedData } = req.body;
+        
+        const prospectIndex = db.prospects.findIndex((p: any) => p.id === id);
+        if (prospectIndex === -1) {
+            return res.status(404).json({ message: 'Prospecto no encontrado' });
+        }
 
-    if (prospectIndex === -1) {
-        return res.status(404).json({ message: 'Prospecto no encontrado' });
+        if (stage === 'client') {
+            const prospectToConvert = db.prospects[prospectIndex];
+            const newClient = {
+                id: uuidv4(),
+                internal_id: `CLI${Date.now().toString().slice(-6)}`,
+                name: prospectToConvert.name,
+                email: prospectToConvert.email || '',
+                phone: prospectToConvert.phone || '',
+                status: 'active',
+                policyCount: 0,
+                assignedAdvisor: 'Por asignar',
+                // Asegúrate de que los campos coinciden con el schema de cliente
+            };
+            
+            db.clients = db.clients || [];
+            db.clients.push(newClient);
+            db.prospects.splice(prospectIndex, 1);
+            
+            await writeDB(db);
+            return res.status(200).json({ message: 'Prospecto convertido a cliente', newClient });
+        }
+
+        const updatedProspect = { ...db.prospects[prospectIndex], ...updatedData, stage };
+        db.prospects[prospectIndex] = updatedProspect;
+        
+        await writeDB(db);
+        res.status(200).json(updatedProspect);
+
+    } catch (error) {
+        res.status(500).json({ message: 'Error al actualizar el prospecto' });
     }
+});
 
-    if (stage === 'client') {
-        const prospectToConvert = db.prospects[prospectIndex];
-        const newClient = {
-            id: `c${Date.now()}`,
-            internal_id: `CLI${Date.now().toString().slice(-6)}`,
-            name: prospectToConvert.name,
-            rfc: '',
-            email: prospectToConvert.email || '',
-            phone: prospectToConvert.phone || '',
-            status: 'active',
-            policyCount: 0,
-            assignedAdvisor: 'Por asignar',
-            insuranceCompany: prospectToConvert.company || '-',
-            alerts: { pendingPayments: false, expiredDocs: false, homonym: false },
-        };
-        db.clients.push(newClient);
-        db.prospects.splice(prospectIndex, 1);
-        writeDb(db);
-        console.log('Prospecto convertido a cliente:', newClient);
-        return res.status(200).json({ message: 'Prospecto convertido', newClient });
-    }
-
-    const updatedProspect = { ...db.prospects[prospectIndex], ...updatedData, stage };
-    db.prospects[prospectIndex] = updatedProspect;
-    writeDb(db);
-    console.log('Prospecto actualizado:', updatedProspect);
-    res.status(200).json(updatedProspect);
-}); 
+export { router as prospectsRouter }; 

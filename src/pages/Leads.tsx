@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { PlusCircle, List, LayoutGrid, Search, UsersRound, ChevronUp, ChevronDown, Eye, Edit } from 'lucide-react';
 import { Lead, LeadStatus, LeadSortField, SortDirection } from '../types/lead';
-import { supabase } from '../supabaseClient';
 import { NewLeadForm } from '../components/NewLeadForm';
 import { Modal } from '../components/Modal';
 import { LeadsKanbanView } from '../components/LeadsKanbanView';
@@ -25,14 +24,18 @@ export default function Leads() {
     useEffect(() => {
         const fetchLeads = async () => {
             setLoading(true);
-            const { data, error } = await supabase
-                .from('prospects')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) console.error('Error fetching leads:', error);
-            else setLeads(data as Lead[]);
-            setLoading(false);
+            try {
+                const response = await fetch('/api/prospects');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+                setLeads(data as Lead[]);
+            } catch (error) {
+                console.error('Error fetching leads:', error);
+            } finally {
+                setLoading(false);
+            }
         };
         fetchLeads();
     }, []);
@@ -42,8 +45,35 @@ export default function Leads() {
     };
 
     const handleLeadStatusChange = async (leadId: string, newStatus: LeadStatus) => {
-        setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus, last_contact_date: new Date().toISOString() } : l));
-        await supabase.from('prospects').update({ status: newStatus, last_contact_date: new Date().toISOString() }).eq('id', leadId);
+        const originalLeads = [...leads];
+        
+        let updatedLeads;
+        if (newStatus === 'Convertido') {
+            updatedLeads = leads.filter(l => l.id !== leadId);
+        } else {
+            updatedLeads = leads.map(l => 
+                l.id === leadId 
+                ? { ...l, status: newStatus, last_contact_date: new Date().toISOString() } 
+                : l
+            );
+        }
+        setLeads(updatedLeads);
+
+        try {
+            const response = await fetch(`/api/prospects/${leadId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus }),
+            });
+
+            if (!response.ok) {
+                setLeads(originalLeads);
+                console.error("Failed to update lead status");
+            }
+        } catch (error) {
+            console.error(error);
+            setLeads(originalLeads);
+        }
     };
 
     const processedLeads = useMemo(() => {

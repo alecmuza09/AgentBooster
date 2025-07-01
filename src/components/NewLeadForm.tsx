@@ -3,19 +3,18 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import clsx from 'clsx';
-import { LeadStatus, LeadTimelineEntry, Lead } from '../types/lead';
+import { LeadStatus, LeadTimelineEntry, Lead, InterestLevel } from '../types/lead';
 import { formatISO } from 'date-fns';
-import { supabase } from '../supabaseClient';
-import { useAuth } from '../contexts/AuthContext';
+import { AlertCircle } from 'lucide-react';
 
 // Mover leadStatusConfig aquí para que esté disponible globalmente en el archivo
 const leadStatusConfig: Record<LeadStatus, { label: string; /* icon?: React.ElementType; */ colorClasses?: string }> = {
-    not_contacted: { label: 'No Contactado' },
-    contacted: { label: 'Contactado' },
-    appointment_set: { label: 'Cita Agendada' },
-    proposal_sent: { label: 'Propuesta Enviada' },
-    converted: { label: 'Convertido' },
-    lost: { label: 'Perdido' },
+    'No Contactado': { label: 'No Contactado' },
+    'Contactado': { label: 'Contactado' },
+    'Cita Agendada': { label: 'Cita Agendada' },
+    'Propuesta Trabajada': { label: 'Propuesta Trabajada' },
+    'Convertido': { label: 'Convertido' },
+    'Perdido': { label: 'Perdido' },
   };
 
 // --- Componentes Auxiliares (Reutilizar o adaptar de NewClientForm/NewPolicyForm) ---
@@ -94,24 +93,20 @@ const SelectField: React.FC<{ label: string; name: string; control: any; errors:
 };
 
 // --- Zod Schema para Nuevo Prospecto ---
-const leadStatusValues: [LeadStatus, ...LeadStatus[]] = [
-    'not_contacted', 'contacted', 'appointment_set', 'proposal_sent', 'converted', 'lost'
-];
-const interestLevels: ['low', 'medium', 'high'] = ['low', 'medium', 'high'];
-
 const newLeadSchema = z.object({
-    fullName: z.string().min(3, 'Nombre completo (mín. 3 letras)').max(100),
-    email: z.string().email('Email inválido').optional().or(z.literal('')),
-    phone: z.string().regex(/^\+?[0-9\s-()]{7,}$/, 'Teléfono inválido (mín. 7 dígitos)').optional().or(z.literal('')),
-    status: z.enum(leadStatusValues).default('not_contacted'),
-    source: z.string().max(50).optional(),
-    assignedAdvisor: z.string().max(50).optional(),
-    potentialValue: z.coerce.number().positive('Debe ser un número positivo').optional(),
-    interestLevel: z.enum(interestLevels).optional(),
-    initialNote: z.string().max(500).optional(),
-}).refine(data => data.email || data.phone, {
-    message: "Se requiere al menos un email o un teléfono",
-    path: ["email"], // O path: ["phone"] o un path general
+    name: z.string().min(3, 'El nombre completo es requerido (mínimo 3 caracteres).'),
+    email: z.string().email('Debe ser un email válido.').optional().or(z.literal('')),
+    phone: z.string().optional(),
+    source: z.string().optional(),
+    potential_value: z.preprocess(
+        (val) => (val === '' ? undefined : Number(val)),
+        z.number({ invalid_type_error: 'Debe ser un número' }).positive('Debe ser un número positivo').optional()
+    ),
+    interest_level: z.preprocess(
+        (val) => (val === '' ? undefined : val),
+        z.enum(['Bajo', 'Medio', 'Alto']).optional()
+    ),
+    notes: z.string().optional(),
 });
 
 type NewLeadFormData = z.infer<typeof newLeadSchema>;
@@ -123,39 +118,32 @@ interface NewLeadFormProps {
 
 // --- Componente Principal del Formulario ---
 export const NewLeadForm: React.FC<NewLeadFormProps> = ({ onLeadCreated, onClose }) => {
-    const { user } = useAuth();
-    const [name, setName] = useState('');
+    const [serverError, setServerError] = useState<string | null>(null);
     const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<NewLeadFormData>({
         resolver: zodResolver(newLeadSchema),
-        defaultValues: {
-            status: 'not_contacted',
-        }
     });
 
     const handleFormSubmit = async (formData: NewLeadFormData) => {
-        if (!user) {
-            console.error("Usuario no autenticado, no se puede crear el lead.");
-            return;
-        }
+        setServerError(null);
+        try {
+            const response = await fetch('/api/prospects', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+            });
 
-        const { data: newLeadData, error: insertError } = await supabase
-            .from('prospects')
-            .insert({
-                name: formData.fullName,
-                email: formData.email,
-                phone: formData.phone,
-                status: 'No Contactado',
-                agent_id: user.id,
-            })
-            .select()
-            .single();
+            const newLeadData = await response.json();
 
-        if (insertError) {
-            console.error(`Error al crear el lead: ${insertError.message}`);
-            // Aquí podrías manejar el error en la UI, ej: setError('...')
-        } else if (newLeadData) {
-            onLeadCreated(newLeadData as Lead);
-            onClose(); // Cierra el modal después de crear
+            if (!response.ok) {
+                throw new Error(newLeadData.message || 'Error al crear el prospecto');
+            }
+
+            onLeadCreated(newLeadData);
+            onClose();
+        } catch (error: any) {
+            setServerError(error.message);
         }
     };
 
@@ -165,20 +153,16 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ onLeadCreated, onClose
         { id: 'otro', name: 'Otro Asesor' },
     ];
 
-    const statusOptions = leadStatusValues.map(status => ({
-        value: status,
-        label: leadStatusConfig[status]?.label || status
-    }));
-
-    const interestOptions = interestLevels.map(level => ({
-        value: level,
-        label: level.charAt(0).toUpperCase() + level.slice(1) // Capitalizar: Low, Medium, High
-    })); 
+    const interestLevelOptions: { value: InterestLevel; label: string }[] = [
+        { value: 'Bajo', label: 'Bajo' },
+        { value: 'Medio', label: 'Medio' },
+        { value: 'Alto', label: 'Alto' },
+    ];
 
     return (
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5 p-1">
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
             <FormSection title="Información de Contacto">
-                <InputField label="Nombre Completo" name="fullName" register={register} errors={errors} placeholder="Ej: Laura Martínez Vega" />
+                <InputField label="Nombre Completo" name="name" register={register} errors={errors} placeholder="Ej: Laura Martínez Vega" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <InputField label="Email" name="email" type="email" register={register} errors={errors} placeholder="ejemplo@correo.com" isOptional={true} />
                     <InputField label="Teléfono" name="phone" type="tel" register={register} errors={errors} placeholder="+52 55 1234 5678" isOptional={true} />
@@ -187,42 +171,33 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ onLeadCreated, onClose
 
             <FormSection title="Detalles del Prospecto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <SelectField 
-                        label="Estado Inicial" 
-                        name="status" 
-                        control={control} 
+                    <InputField 
+                        label="Fuente del Prospecto" 
+                        name="source" 
+                        register={register} 
                         errors={errors} 
-                        options={statusOptions} 
+                        placeholder="Ej: Referido, Campaña Facebook" 
+                        isOptional={true} 
                     />
-                    <InputField label="Fuente del Prospecto" name="source" register={register} errors={errors} placeholder="Ej: Referido, Web, Evento" isOptional={true} />
                 </div>
-                <SelectField 
-                    label="Asesor Asignado" 
-                    name="assignedAdvisor" 
-                    control={control} 
-                    errors={errors} 
-                    options={exampleAdvisors.map(a => ({ value: a.name, label: a.name }))} 
-                    placeholder="Seleccionar asesor..." 
-                    isOptional={true} 
-                />
             </FormSection>
 
             <FormSection title="Información Adicional (Opcional)">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InputField label="Valor Potencial Estimado ($)" name="potentialValue" type="number" register={register} errors={errors} placeholder="Ej: 25000" isOptional={true} />
+                    <InputField label="Valor Potencial Estimado ($)" name="potential_value" type="number" register={register} errors={errors} placeholder="Ej: 25000" isOptional={true} />
                     <SelectField 
                         label="Nivel de Interés" 
-                        name="interestLevel" 
+                        name="interest_level" 
                         control={control} 
                         errors={errors} 
-                        options={interestOptions} 
+                        options={interestLevelOptions} 
                         placeholder="Seleccionar nivel..." 
                         isOptional={true} 
                     />
                 </div>
                 <InputField 
                     label="Nota Inicial" 
-                    name="initialNote" 
+                    name="notes" 
                     as="textarea" 
                     register={register} 
                     errors={errors} 
@@ -230,6 +205,13 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ onLeadCreated, onClose
                     isOptional={true} 
                 />
             </FormSection>
+
+            {serverError && (
+                <div className="flex items-center gap-2 text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/50 p-3 rounded-md">
+                    <AlertCircle className="w-5 h-5" />
+                    <p>{serverError}</p>
+                </div>
+            )}
 
             <div className="flex justify-end gap-3 pt-5 border-t border-gray-200 dark:border-gray-700">
                 <button

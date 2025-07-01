@@ -9,10 +9,13 @@ import {
 import clsx from 'clsx';
 import { format, formatDistanceToNowStrict } from 'date-fns'; // Añadir formatDistanceToNowStrict
 import { es } from 'date-fns/locale'; // Usar locale completo
+import { Modal } from '../components/Modal';
+import { NewPolicyForm } from '../components/NewPolicyForm';
+import { NewDocumentForm } from '../components/NewDocumentForm';
+import { NewClientForm } from '../components/NewClientForm';
 
 // Importar datos de ejemplo (Actualizado)
-import { examplePolicies } from '../data/policies';
-import { Policy } from '../types/policy';
+import { examplePolicies, Policy } from '../data/policies';
 
 // --- Tipos y Datos de Ejemplo (Actualizados) ---
 type ActivityType = 'policy' | 'document' | 'payment_received' | 'payment_pending' | 'renewal_alert' | 'task';
@@ -200,8 +203,26 @@ const ActivityItem: React.FC<{ item: ActivityItemData }> = ({ item }) => {
 // --- Componente Principal Dashboard con Navegación ---
 export const Dashboard = () => {
     const navigate = useNavigate();
+    
+    // Estados para los modales
+    const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
+    const [isNewDocumentModalOpen, setIsNewDocumentModalOpen] = useState(false);
+    const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+    
     const [activityFilter, setActivityFilter] = useState<ActivityType | 'all'>('all');
     const [activitySearch, setActivitySearch] = useState('');
+
+    // Póliza de ejemplo para el modal de documentos
+    const dummyPolicyForUpload: Policy = examplePolicies[0] || {
+        id: 'dummy-1',
+        policyNumber: 'POL-000',
+        clientName: 'Cliente de Ejemplo',
+        status: 'active',
+        insuranceType: 'Vida',
+        premium: 0,
+        startDate: new Date().toISOString(),
+        endDate: new Date().toISOString(),
+    };
 
     // --- Cálculos de Indicadores ---
     const activePoliciesCount = useMemo(() => {
@@ -258,170 +279,164 @@ export const Dashboard = () => {
 
     const advisorName = "John Doe"; // Simular nombre del asesor
 
-    // Handlers para navegación
-    const goToNewPolicy = () => {
-        // TODO: Añadir lógica de permisos si es necesario
-        // TODO: Limpiar estado del formulario si se reutiliza un componente
-        navigate('/new-policy'); // Ruta placeholder
-    };
-    const goToNewDocument = () => {
-        // TODO: Añadir lógica de permisos
-        // TODO: Considerar pasar props (cliente/póliza) si es necesario: navigate('/new-document', { state: { clientId: '...' } })
-         navigate('/new-document'); // Ruta placeholder
-    };
-    const goToNewClient = () => {
-         // TODO: Añadir lógica de permisos
-         // Actualmente el botón "Nuevo Cliente" principal está en Layout.tsx y abre un modal
-         // Este botón del dashboard podría hacer lo mismo o navegar a /clients?action=new
-         // Por ahora, lo dejamos sin acción específica aquí.
-         console.log('Acción "Nuevo Cliente" desde Dashboard pendiente');
-    };
-
     return (
-        <div className="space-y-8">
-
-            {/* 1. Cabecera Personalizada y Acciones Rápidas */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Hola, {advisorName.split(' ')[0]} 👋</h1>
-                <div className="flex items-center gap-3">
-                    {/* Botones con navegación */}
-                    <button 
-                        onClick={goToNewPolicy} 
-                        className="btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium">
-                        <FilePlus className="w-4 h-4" />
-                         Registrar Póliza
-                     </button>
-                     <button 
-                        onClick={goToNewDocument}
-                        className="btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium">
-                        <UploadCloud className="w-4 h-4" />
-                         Subir Documento
-                     </button>
-                     <button 
-                        onClick={goToNewClient} // O usar el modal si se prefiere
-                        className="btn-primary flex items-center gap-2 px-4 py-2 text-sm font-medium">
-                        <PlusCircle className="w-4 h-4" />
-                         Nuevo Cliente
-                     </button>
-                </div>
-            </div>
-
-            {/* 2. KPIs Principales */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                 <StatCard
-                    title="Pólizas Activas"
-                    value={activePoliciesCount}
-                    icon={FileText}
-                    onClick={() => navigate('/policies?status=active')} // Navegar a pólizas filtradas
-                 />
-                 <StatCard
-                    title="Pagos Pendientes"
-                    value={pendingPaymentsCount}
-                    icon={AlertCircle}
-                    colorClass={pendingPaymentsCount > 0 ? 'border-red-500 text-red-600' : ''} // Resaltar si hay pendientes
-                    note={pendingPaymentsCount > 0 ? 'Requieren atención inmediata' : 'Todo al día'}
-                    onClick={() => navigate('/policies?pendingPayment=true')} // Navegar
-                />
-                {/* Añadir más StatCards si es necesario (Ej: Nuevos Clientes Mes, Renovaciones Próximas) */}
-                <StatCard
-                    title="Tareas Próximas (7 días)"
-                    value={upcomingTasks.length}
-                    icon={CalendarCheck}
-                    note={upcomingTasks.length > 0 ? 'Ver detalles abajo' : 'Sin tareas próximas'}
-                 />
-                 <StatCard
-                     title="Primas Vendidas Totales (Simulado)"
-                     value={`$${totalSales.toLocaleString()}`}
-                     icon={DollarSign}
-                     note="Datos de ejemplo"
-                 />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* 3. Tareas Pendientes y Actividad Reciente */}
-                <div className="lg:col-span-2 space-y-6">
-                    {/* Sección Tareas Próximas */} 
-                    <div>
-                        <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Tareas por Vencimiento (Próximos 7 días)</h2>
-                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 max-h-96 overflow-y-auto">
-                            {upcomingTasks.length > 0 ? (
-                                upcomingTasks.map(task => <ActivityItem key={task.id} item={task} />)
-                            ) : (
-                                <p className="text-center text-gray-500 dark:text-gray-400 py-4">No hay tareas próximas.</p>
-                            )}
-                        </div>
+        <div className="p-4 sm:p-6 lg:p-8 flex flex-col h-full bg-gray-50 dark:bg-gray-900">
+            {/* Cabecera y Acciones Rápidas */}
+            <header className="mb-8">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Dashboard</h1>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => setIsClientModalOpen(true)} className="btn-secondary flex items-center gap-2">
+                            <PlusCircle className="w-4 h-4" /> Nuevo Cliente
+                        </button>
+                        <button onClick={() => setIsPolicyModalOpen(true)} className="btn-secondary flex items-center gap-2">
+                            <FilePlus className="w-4 h-4" /> Nueva Póliza
+                        </button>
+                        <button onClick={() => setIsNewDocumentModalOpen(true)} className="btn-primary flex items-center gap-2">
+                            <UploadCloud className="w-4 h-4" /> Subir Documento
+                        </button>
                     </div>
-                    
-                    {/* Sección Actividad Reciente / Logs */} 
-                    <div>
-                        <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Actividad Reciente y Logs</h2>
-                         {/* Controles de Filtro y Búsqueda para Logs */} 
-                         <div className="flex flex-col sm:flex-row gap-3 mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border dark:border-gray-700">
-                             <div className="flex-1 relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" />
-                                 <input
-                                     type="text"
-                                     placeholder="Buscar en actividad..."
-                                     className="w-full pl-9 pr-3 py-1.5 text-sm border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-primary dark:focus:ring-primary-dark focus:border-primary dark:focus:border-primary-dark"
-                                     value={activitySearch}
-                                     onChange={(e) => setActivitySearch(e.target.value)}
-                                 />
+                </div>
+            </header>
+
+            {/* Contenido principal del Dashboard */}
+            <main className="flex-grow space-y-8">
+                {/* 1. KPIs Principales */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                     <StatCard
+                        title="Pólizas Activas"
+                        value={activePoliciesCount}
+                        icon={FileText}
+                        onClick={() => navigate('/policies?status=active')} // Navegar a pólizas filtradas
+                     />
+                     <StatCard
+                        title="Pagos Pendientes"
+                        value={pendingPaymentsCount}
+                        icon={AlertCircle}
+                        colorClass={pendingPaymentsCount > 0 ? 'border-red-500 text-red-600' : ''} // Resaltar si hay pendientes
+                        note={pendingPaymentsCount > 0 ? 'Requieren atención inmediata' : 'Todo al día'}
+                        onClick={() => navigate('/policies?pendingPayment=true')} // Navegar
+                    />
+                    {/* Añadir más StatCards si es necesario (Ej: Nuevos Clientes Mes, Renovaciones Próximas) */}
+                    <StatCard
+                        title="Tareas Próximas (7 días)"
+                        value={upcomingTasks.length}
+                        icon={CalendarCheck}
+                        note={upcomingTasks.length > 0 ? 'Ver detalles abajo' : 'Sin tareas próximas'}
+                     />
+                     <StatCard
+                         title="Primas Vendidas Totales (Simulado)"
+                         value={`$${totalSales.toLocaleString()}`}
+                         icon={DollarSign}
+                         note="Datos de ejemplo"
+                     />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* 3. Tareas Pendientes y Actividad Reciente */}
+                    <div className="lg:col-span-2 space-y-6">
+                        {/* Sección Tareas Próximas */} 
+                        <div>
+                            <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Tareas por Vencimiento (Próximos 7 días)</h2>
+                            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 max-h-96 overflow-y-auto">
+                                {upcomingTasks.length > 0 ? (
+                                    upcomingTasks.map(task => <ActivityItem key={task.id} item={task} />)
+                                ) : (
+                                    <p className="text-center text-gray-500 dark:text-gray-400 py-4">No hay tareas próximas.</p>
+                                )}
+                            </div>
+                        </div>
+                        
+                        {/* Sección Actividad Reciente / Logs */} 
+                        <div>
+                            <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Actividad Reciente y Logs</h2>
+                             {/* Controles de Filtro y Búsqueda para Logs */} 
+                             <div className="flex flex-col sm:flex-row gap-3 mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border dark:border-gray-700">
+                                 <div className="flex-1 relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" />
+                                     <input
+                                         type="text"
+                                         placeholder="Buscar en actividad..."
+                                         className="w-full pl-9 pr-3 py-1.5 text-sm border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-primary dark:focus:ring-primary-dark focus:border-primary dark:focus:border-primary-dark"
+                                         value={activitySearch}
+                                         onChange={(e) => setActivitySearch(e.target.value)}
+                                     />
+                                 </div>
+                                 <select
+                                     value={activityFilter}
+                                     onChange={(e) => setActivityFilter(e.target.value as ActivityType | 'all')}
+                                     className="text-sm border rounded-md p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-primary dark:focus:ring-primary-dark focus:border-primary dark:focus:border-primary-dark"
+                                >
+                                     <option value="all">Todo Tipo</option>
+                                     <option value="policy">Pólizas</option>
+                                     <option value="document">Documentos</option>
+                                     <option value="payment_received">Pagos Recibidos</option>
+                                     <option value="payment_pending">Pagos Pendientes</option>
+                                     <option value="renewal_alert">Alertas Renovación</option>
+                                     <option value="task">Tareas</option>
+                                 </select>
                              </div>
-                             <select
-                                 value={activityFilter}
-                                 onChange={(e) => setActivityFilter(e.target.value as ActivityType | 'all')}
-                                 className="text-sm border rounded-md p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-primary dark:focus:ring-primary-dark focus:border-primary dark:focus:border-primary-dark"
-                            >
-                                 <option value="all">Todo Tipo</option>
-                                 <option value="policy">Pólizas</option>
-                                 <option value="document">Documentos</option>
-                                 <option value="payment_received">Pagos Recibidos</option>
-                                 <option value="payment_pending">Pagos Pendientes</option>
-                                 <option value="renewal_alert">Alertas Renovación</option>
-                                 <option value="task">Tareas</option>
-                             </select>
-                         </div>
-                         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 max-h-[600px] overflow-y-auto">
-                             {filteredActivities.length > 0 ? (
-                                filteredActivities.map(item => <ActivityItem key={item.id} item={item} />)
-                            ) : (
-                                <p className="text-center text-gray-500 dark:text-gray-400 py-4">No se encontró actividad con esos filtros.</p>
-                            )}
+                             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 max-h-[600px] overflow-y-auto">
+                                 {filteredActivities.length > 0 ? (
+                                    filteredActivities.map(item => <ActivityItem key={item.id} item={item} />)
+                                ) : (
+                                    <p className="text-center text-gray-500 dark:text-gray-400 py-4">No se encontró actividad con esos filtros.</p>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* 4. Reporte de Primas Vendidas Simuladas */}
-                <div className="lg:col-span-1 space-y-6">
-                    <div>
-                        <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Primas Vendidas por Agente (Simulado)</h2>
-                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-                            <ul className="space-y-2 text-sm">
-                                {Object.entries(salesByAgent).sort(([, a], [, b]) => b - a).map(([agent, amount]) => (
-                                    <li key={agent} className="flex justify-between items-center">
-                                        <span className="text-gray-700 dark:text-gray-300">{agent}</span>
-                                        <span className="font-medium text-gray-900 dark:text-white">${amount.toLocaleString()}</span>
-                                    </li>
-                                ))}
-                             </ul>
+                    {/* 4. Reporte de Primas Vendidas Simuladas */}
+                    <div className="lg:col-span-1 space-y-6">
+                        <div>
+                            <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Primas Vendidas por Agente (Simulado)</h2>
+                            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+                                <ul className="space-y-2 text-sm">
+                                    {Object.entries(salesByAgent).sort(([, a], [, b]) => b - a).map(([agent, amount]) => (
+                                        <li key={agent} className="flex justify-between items-center">
+                                            <span className="text-gray-700 dark:text-gray-300">{agent}</span>
+                                            <span className="font-medium text-gray-900 dark:text-white">${amount.toLocaleString()}</span>
+                                        </li>
+                                    ))}
+                                 </ul>
+                            </div>
                         </div>
-                    </div>
-                    <div>
-                         <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Primas Vendidas por Tipo Seguro (Simulado)</h2>
-                         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-                            <ul className="space-y-2 text-sm">
-                                {Object.entries(salesByType).sort(([, a], [, b]) => b - a).map(([type, amount]) => (
-                                    <li key={type} className="flex justify-between items-center">
-                                        <span className="text-gray-700 dark:text-gray-300">{type}</span>
-                                        <span className="font-medium text-gray-900 dark:text-white">${amount.toLocaleString()}</span>
-                                    </li>
-                                ))}
-                             </ul>
+                        <div>
+                             <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Primas Vendidas por Tipo Seguro (Simulado)</h2>
+                             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+                                <ul className="space-y-2 text-sm">
+                                    {Object.entries(salesByType).sort(([, a], [, b]) => b - a).map(([type, amount]) => (
+                                        <li key={type} className="flex justify-between items-center">
+                                            <span className="text-gray-700 dark:text-gray-300">{type}</span>
+                                            <span className="font-medium text-gray-900 dark:text-white">${amount.toLocaleString()}</span>
+                                        </li>
+                                    ))}
+                                 </ul>
+                            </div>
                         </div>
-                    </div>
-                    {/* Aquí se podría añadir un gráfico simple si se instala una librería */}
-                 </div>
-            </div>
+                        {/* Aquí se podría añadir un gráfico simple si se instala una librería */}
+                     </div>
+                </div>
+            </main>
+
+            {/* Modales */}
+            <Modal isOpen={isPolicyModalOpen} onClose={() => setIsPolicyModalOpen(false)} title="Registrar Nueva Póliza">
+                <NewPolicyForm onPolicyCreated={() => { /* Lógica para refrescar datos */ }} onClose={() => setIsPolicyModalOpen(false)} />
+            </Modal>
+            
+            <Modal isOpen={isClientModalOpen} onClose={() => setIsClientModalOpen(false)} title="Registrar Nuevo Cliente">
+                <NewClientForm onClientCreated={() => { /* Lógica para refrescar datos */ }} onClose={() => setIsClientModalOpen(false)} />
+            </Modal>
+
+            <Modal isOpen={isNewDocumentModalOpen} onClose={() => setIsNewDocumentModalOpen(false)} title="Subir Nuevo Documento">
+                <NewDocumentForm 
+                    onClose={() => setIsNewDocumentModalOpen(false)} 
+                    onDocumentUploaded={() => {
+                        console.log("Documento subido, refrescar datos aquí");
+                        setIsNewDocumentModalOpen(false);
+                    }}
+                />
+            </Modal>
         </div>
     );
 };
