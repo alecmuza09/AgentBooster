@@ -1,0 +1,14 @@
+# Archivo de configuración para Netlify
+
+[build]
+  # Comando para construir el frontend
+  command = "npm run build"
+  # Directorio donde se genera el sitio estático
+  publish = "dist"
+
+[[redirects]]
+  # Redirige todas las llamadas a la API al servidor backend
+  from = "/api/*"
+  # POR FAVOR, REEMPLAZA ESTA URL con la URL de tu backend en producción
+  to = "https://URL_DE_TU_BACKEND/:splat"
+  status = 200 # OK, significa que la redirección es una reescritura de la URL 
