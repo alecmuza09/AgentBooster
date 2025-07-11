@@ -1,0 +1,124 @@
+{
+  "clients": [
+    {
+      "fullName": "ALEC MUZA",
+      "rfc": "MUMA951009JHA",
+      "phone": "8114138917",
+      "email": "alecmuza09@gmail.com",
+      "birthDate": "1995-10-09",
+      "address": {
+        "state": "NUEVO LEÓN",
+        "zipCode": "66470"
+      },
+      "ineDocument": {},
+      "responsibleAdvisor": "Ana López",
+      "dataConsent": true,
+      "privacyNoticeSigned": true,
+      "additionalNotes": "",
+      "id": "c1749582668322",
+      "name": "ALEC MUZA",
+      "status": "active",
+      "policyCount": 0,
+      "internal_id": "CLI668322",
+      "assignedAdvisor": "Ana López",
+      "alerts": {
+        "pendingPayments": false,
+        "expiredDocs": false,
+        "homonym": false
+      }
+    }
+  ],
+  "prospects": [
+    {
+      "id": "p1",
+      "name": "Ana García López",
+      "company": "Tech Solutions S.A. de C.V.",
+      "email": "ana.g@tech.com",
+      "source": "Web",
+      "value": 25000,
+      "stage": "no_contacted"
+    },
+    {
+      "id": "p2",
+      "name": "Transportes Rápidos del Norte",
+      "phone": "81-XXXX-XXXX",
+      "source": "Referido",
+      "value": 150000,
+      "stage": "no_contacted"
+    },
+    {
+      "id": "p7",
+      "name": "Dr. Luis Fernández",
+      "source": "Evento",
+      "phone": "55-YYYY-YYYY",
+      "stage": "no_contacted"
+    },
+    {
+      "id": "p3",
+      "name": "Sofía Martínez",
+      "company": "Innovate Corp Labs",
+      "phone": "55-1234-5678",
+      "lastInteraction": "Llamada 25/May",
+      "value": 8000,
+      "stage": "contacted"
+    },
+    {
+      "id": "p8",
+      "name": "Constructora Monte Albán S.C.",
+      "email": "contacto@montealban.com",
+      "source": "Web",
+      "value": 95000,
+      "stage": "contacted"
+    },
+    {
+      "id": "p4",
+      "name": "Carlos Rodríguez",
+      "company": "Global Enterprises MX",
+      "email": "carlos.r@global.com",
+      "lastInteraction": "Propuesta trabajada 01/Jun",
+      "value": 18000,
+      "stage": "appointment_set"
+    },
+    {
+      "id": "p9",
+      "name": "Logística Veloz (Flotilla)",
+      "lastInteraction": "Revisión propuesta 03/Jun",
+      "value": 120000,
+      "stage": "appointment_set"
+    },
+    {
+      "id": "p6",
+      "name": "Jorge Torres Peña",
+      "lastInteraction": "No interesado - Precio",
+      "stage": "lost"
+    },
+    {
+      "id": "p10",
+      "name": "Manufacturas del Centro",
+      "lastInteraction": "Decidió ir con competidor",
+      "stage": "lost"
+    },
+    {
+      "name": "alec muza",
+      "email": "alecmuza@hotmail.com",
+      "phone": "8114138917",
+      "source": "Ana López",
+      "potential_value": 30000,
+      "interest_level": "Medio",
+      "notes": "",
+      "id": "p1750814502205",
+      "stage": "no_contacted"
+    },
+    {
+      "name": "alec muza",
+      "email": "alecmuza@alecmuza.com",
+      "phone": "8114138917",
+      "source": "Ana López",
+      "potential_value": 35000,
+      "interest_level": "Bajo",
+      "notes": "",
+      "id": "p1750862810509",
+      "stage": "no_contacted"
+    }
+  ]
+}
