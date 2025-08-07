@@ -1,46 +1,30 @@
 export type ImportableEntityType = 'polizas' | 'recibos';
 
 export interface PolizaImport {
-  OT: string;
   "No poliza": string;
-  Referencia?: string;
-  "No endoso": string;
-  Inciso: number;
-  Concepto: string;
-  "Cliente id": number;
-  Cliente: string;
-  Ramo: string;
-  SubRamo: string;
-  Aseguradora: string;
-  "Cve agente": number;
-  "Fec vig de": string;
-  "Fec vig a": string;
-  Servicio: string;
-  Prima: number;
-  Moneda: string;
-  Grupo: string;
-  Vendedor: string;
-  "Usuario Captura": string;
-  "Fec Creación": string;
-  "Porc Com": number;
-  "Total recibos": number;
-  "Forma Pago": string;
+  "Inciso": number;
+  "Concepto": string;
+  "Modelo": string;
+  "No. Serie": string;
+  "Cliente id": string;
+  "Cliente": string;
+  "Clave de Agente": string;
+  "Aseguradora": string;
+  "Ramo": string;
+  "Fecha vigencia total de póliza de": string;
+  "Fecha vigencia total de póliza a": string;
+  "Fecha vigencia del recibo de": string;
+  "Fecha vigencia del recibo a": string;
   "Prima Neta": number;
-  Derecho: number;
-  Recargo: number;
-  IVA: number;
-  Total: number;
-  "Estatus mov": string;
-  "Comision Total": string;
-  "Comision Vendedor": string;
-  "Ejecutivo Servicio": string;
-  "Tipo de Póliza": string;
-  "Tipo de Pago": string;
-  "Fec Registro": string;
-  "Tipo Movimiento": string;
+  "Derecho": number;
+  "Recargo": number;
+  "Total": number;
+  "Tipo de Cargo": 'CAT' | 'CXC' | 'CUT';
+  "Fecha de Registro": string;
+  "Estatus mov": 'Vigente' | 'Cancelada' | 'Vencida';
 }
 
-export interface ReciboImport extends Omit<PolizaImport, 'Fec vig de' | 'Fec vig a'> {
+export interface ReciboImport extends Omit<PolizaImport, 'Fecha vigencia total de póliza de' | 'Fecha vigencia total de póliza a'> {
   Recibo: number;
   "Fec_vig_de": string;
   "Fec_vig_a": string;

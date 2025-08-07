@@ -213,6 +213,12 @@ export const getPolicies = async (): Promise<Policy[]> => {
                     const mappedPolicy = {
                         id: p.id,
                         policyNumber: p.policy_number || 'N/A',
+                        inciso: p.inciso ?? undefined,
+                        concepto: p.concepto ?? undefined,
+                        modelo: p.modelo ?? undefined,
+                        numeroSerie: p.numero_serie ?? undefined,
+                        clienteId: p.cliente_id ?? undefined,
+                        claveAgente: p.clave_agente ?? undefined,
                         ramo: p.ramo || 'N/A',
                         subproducto: p.subproducto,
                         aseguradora: p.aseguradora || 'N/A',
@@ -220,8 +226,13 @@ export const getPolicies = async (): Promise<Policy[]> => {
                         formaDePago: p.forma_de_pago || 'Mensual',
                         conductoDePago: p.conducto_de_pago || 'Tarjeta',
                         moneda: p.moneda || 'MXN',
+                        primaNeta: p.prima_neta || 0,
+                        derecho: p.derecho || 0,
+                        recargo: p.recargo || 0,
+                        total: p.total || 0,
+                        tipoDeCargo: p.tipo_de_cargo ?? undefined,
+                        fechaRegistro: p.fecha_registro ?? undefined,
                         sumaAsegurada: p.suma_asegurada || 0,
-                        premiumAmount: p.premium_amount || 0,
                         fechaPagoActual: p.fecha_pago_actual,
                         vigenciaPeriodo: { 
                             inicio: p.vigencia_periodo_inicio || '', 
@@ -254,6 +265,12 @@ export const getPolicies = async (): Promise<Policy[]> => {
                     return {
                         id: p.id,
                         policyNumber: p.policy_number || 'N/A',
+                        inciso: p.inciso ?? undefined,
+                        concepto: p.concepto ?? undefined,
+                        modelo: p.modelo ?? undefined,
+                        numeroSerie: p.numero_serie ?? undefined,
+                        clienteId: p.cliente_id ?? undefined,
+                        claveAgente: p.clave_agente ?? undefined,
                         ramo: p.ramo || 'N/A',
                         aseguradora: p.aseguradora || 'N/A',
                         status: p.status || 'active',
@@ -261,7 +278,10 @@ export const getPolicies = async (): Promise<Policy[]> => {
                         conductoDePago: p.conducto_de_pago || 'Tarjeta',
                         moneda: p.moneda || 'MXN',
                         sumaAsegurada: p.suma_asegurada || 0,
-                        premiumAmount: p.premium_amount || 0,
+                        primaNeta: p.prima_neta || 0,
+                        derecho: p.derecho || 0,
+                        recargo: p.recargo || 0,
+                        total: p.total || 0,
                         fechaPagoActual: p.fecha_pago_actual,
                         vigenciaPeriodo: { inicio: p.vigencia_periodo_inicio || '', fin: p.vigencia_periodo_fin || '' },
                         vigenciaTotal: { inicio: p.vigencia_total_inicio || '', fin: p.vigencia_total_fin || '' },
@@ -293,20 +313,33 @@ export const createPolicy = async (policyData: Omit<Policy, 'id' | 'documents' |
         .from('policies')
         .insert({
             policy_number: policyData.policyNumber,
+            inciso: policyData.inciso,
+            concepto: policyData.concepto,
+            modelo: policyData.modelo,
+            numero_serie: policyData.numeroSerie,
+            cliente_id: policyData.clienteId,
+            clave_agente: policyData.claveAgente,
             ramo: policyData.ramo,
+            subproducto: policyData.subproducto,
+            aseguradora: policyData.aseguradora,
+            status: policyData.status,
             forma_de_pago: policyData.formaDePago,
             conducto_de_pago: policyData.conductoDePago,
             moneda: policyData.moneda,
+            prima_neta: policyData.primaNeta,
+            derecho: policyData.derecho,
+            recargo: policyData.recargo,
+            total: policyData.total,
+            tipo_de_cargo: policyData.tipoDeCargo,
+            fecha_registro: policyData.fechaRegistro,
             suma_asegurada: policyData.sumaAsegurada,
-            aseguradora: policyData.aseguradora,
-            status: policyData.status,
             fecha_pago_actual: policyData.fechaPagoActual,
             vigencia_periodo_inicio: policyData.vigenciaPeriodo.inicio,
             vigencia_periodo_fin: policyData.vigenciaPeriodo.fin,
             vigencia_total_inicio: policyData.vigenciaTotal.inicio,
             vigencia_total_fin: policyData.vigenciaTotal.fin,
             termino_pagos: policyData.terminoPagos,
-            premium_amount: policyData.premiumAmount,
+            comentarios: policyData.comentarios,
         })
         .select()
         .single();
@@ -348,27 +381,122 @@ export const createPolicy = async (policyData: Omit<Policy, 'id' | 'documents' |
 }
 
 export const importPolicies = async (policies: PolizaImport[]) => {
+    const pick = (row: any, keys: string[]) => {
+        for (const k of keys) if (row[k] !== undefined && row[k] !== null && row[k] !== '') return row[k];
+        return undefined;
+    };
+    const normalizeDate = (val: any): string | undefined => {
+        if (val === null || val === undefined) return undefined;
+        let s = String(val).trim();
+        if (!s) return undefined;
+        // Remove time part if present (T, space, etc.)
+        s = s.replace(/[T ]\d{1,2}:\d{2}(:\d{2})?.*$/, '');
+        // yyyy-mm-dd or yyyy/mm/dd
+        let m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+        if (m) {
+            const [_, y, mo, d] = m; return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        }
+        // dd/mm/yyyy or dd-mm-yyyy
+        m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        if (m) {
+            let [_, d, mo, y] = m; if (y.length === 2) y = `20${y}`; return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        }
+        // yy hh:mm-mm-dd (ej: 25 13:59-04-10)
+        m = s.match(/^(\d{2})\s+\d{1,2}:\d{2}[\-\/](\d{1,2})[\-\/](\d{1,2})$/);
+        if (m) {
+            const [_, yy, mo, d] = m; const y = `20${yy}`; return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        }
+        // Fallback: extrae últimos 3 números como y-m-d o d-m-y heurístico
+        const nums = s.match(/\d{1,4}/g) || [];
+        if (nums.length >= 3) {
+            let a = nums[0], b = nums[1], c = nums[2];
+            // Si a es año
+            if (a.length === 4) {
+                return `${a}-${String(b).padStart(2,'0')}-${String(c).padStart(2,'0')}`;
+            }
+            // Si c es año
+            if (c.length === 4) {
+                return `${c}-${String(b).padStart(2,'0')}-${String(a).padStart(2,'0')}`;
+            }
+            // Si a parece año de 2 dígitos
+            if (a.length === 2) {
+                return `20${a}-${String(b).padStart(2,'0')}-${String(c).padStart(2,'0')}`;
+            }
+        }
+        return undefined;
+    };
+
+    const toNumber = (val: any): number | null => {
+        if (val === null || val === undefined || val === '') return null;
+        let s = String(val).trim();
+        s = s.replace(/[^0-9,.-]/g, '');
+        if (s.includes(',') && s.includes('.')) s = s.replace(/,/g, '');
+        else if (s.includes(',') && !s.includes('.')) s = s.replace(/,/g, '.');
+        const n = Number(s);
+        return isNaN(n) ? null : n;
+    };
+
+    const mapStatus = (s: any): string | undefined => {
+        const v = String(s || '').toLowerCase();
+        if (v.includes('vigente')) return 'active';
+        if (v.includes('cancel')) return 'cancelled';
+        if (v.includes('vencid')) return 'expired';
+        if (v.includes('pend')) return 'pending';
+        return undefined;
+    };
+
     const formattedPolicies = policies.map(p => ({
-        policy_number: p["No poliza"],
-        ramo: p.Ramo,
-        aseguradora: p.Aseguradora,
-        moneda: p.Moneda,
-        status: p["Estatus mov"],
-        premium_amount: p.Prima,
-        forma_de_pago: p["Forma Pago"],
-        // TODO: Mapear más campos si es necesario
-        // Las fechas necesitan conversión de DD/MM/YYYY a YYYY-MM-DD para Supabase
-        vigencia_periodo_inicio: p["Fec vig de"].split('/').reverse().join('-'),
-        vigencia_periodo_fin: p["Fec vig a"].split('/').reverse().join('-'),
+        policy_number: pick(p, ["No poliza", "No póliza", "Poliza", "Póliza", "No_poliza"]),
+        inciso: pick(p, ["Inciso"]),
+        concepto: pick(p, ["Concepto", "Referencia"]),
+        modelo: pick(p, ["Modelo"]),
+        numero_serie: pick(p, ["No. Serie", "No Serie", "Numero Serie", "Número de Serie", "Serie"]),
+        cliente_id: pick(p, ["Cliente id", "ClienteID", "Cliente Id", "Id Cliente"]),
+        clave_agente: pick(p, ["Clave de Agente", "Cve agente", "Cve Agente", "Clave Agente"]),
+        ramo: pick(p, ["Ramo", "SubRamo", "Sub Ramo"]),
+        aseguradora: pick(p, ["Aseguradora", "Compañía", "Compania"]),
+        status: pick(p, ["Estatus mov", "Status Poliza", "Status Movimiento"]),
+        prima_neta: pick(p, ["Prima Neta", "Prima"]),
+        derecho: pick(p, ["Derecho"]),
+        recargo: pick(p, ["Recargo"]),
+        total: pick(p, ["Total", "Total TC"]),
+        tipo_de_cargo: pick(p, ["Tipo de Cargo", "Tipo Cargo", "Tipo de Pago", "Forma Pago"]),
+        fecha_registro: normalizeDate(pick(p, ["Fecha de Registro", "Fec Registro", "Fec Creación", "Fec Creacion"])),
+        vigencia_total_inicio: normalizeDate(pick(p, ["Fecha vigencia total de póliza de", "Fec vig de"])),
+        vigencia_total_fin: normalizeDate(pick(p, ["Fecha vigencia total de póliza a", "Fec vig a"])),
+        vigencia_periodo_inicio: normalizeDate(pick(p, ["Fecha vigencia del recibo de", "Fec vig de", "Fec_vig_de"])),
+        vigencia_periodo_fin: normalizeDate(pick(p, ["Fecha vigencia del recibo a", "Fec vig a", "Fec_vig_a"])),
     }));
 
     const { data, error } = await supabase
         .from('policies')
-        .upsert(formattedPolicies, { onConflict: 'policy_number' });
+        .upsert(formattedPolicies, { onConflict: 'policy_number' })
+        .select('id, policy_number');
 
     if (error) {
         console.error('Error importing policies:', error);
         throw new Error(error.message);
+    }
+
+    // Crear contactos básicos con el nombre de Cliente (contratante/asegurado)
+    try {
+        const idByNumber = new Map<string, string>();
+        (data || []).forEach(r => idByNumber.set(r.policy_number, r.id));
+        const rows: any[] = [];
+        for (const p of policies) {
+            const num = pick(p as any, ["No poliza", "No póliza", "Poliza", "Póliza", "No_poliza"]);
+            const pid = idByNumber.get(num);
+            const nombre = pick(p as any, ["Cliente", "Nombre Cliente", "Asegurado"]);
+            if (!pid || !nombre) continue;
+            rows.push({ policy_id: pid, role: 'contratante', nombre: String(nombre) });
+            rows.push({ policy_id: pid, role: 'asegurado', nombre: String(nombre) });
+        }
+        if (rows.length) {
+            const { error: upErr } = await supabase.from('policy_contacts').upsert(rows, { onConflict: 'policy_id,role' });
+            if (upErr) console.error('contacts upsert error', upErr);
+        }
+    } catch (e) {
+        console.error('contacts import aux error', e);
     }
 
     return data;
@@ -400,6 +528,51 @@ export const importRecibos = async (recibos: ReciboImport[]) => {
 
     return data;
 }
+
+// Actualización masiva de pólizas (campos comunes)
+export const updatePoliciesBulk = async (
+    ids: string[],
+    updates: Partial<{
+        status: string;
+        formaDePago: string;
+        conductoDePago: string;
+        aseguradora: string;
+    }>
+) => {
+    const mapped: Record<string, any> = {};
+    if (updates.status !== undefined) mapped.status = updates.status;
+    if (updates.formaDePago !== undefined) mapped.forma_de_pago = updates.formaDePago;
+    if (updates.conductoDePago !== undefined) mapped.conducto_de_pago = updates.conductoDePago;
+    if (updates.aseguradora !== undefined) mapped.aseguradora = updates.aseguradora;
+
+    if (Object.keys(mapped).length === 0) return { data: null, error: null };
+
+    const { data, error } = await supabase
+        .from('policies')
+        .update(mapped)
+        .in('id', ids)
+        .select();
+
+    if (error) {
+        console.error('Error updating policies in bulk:', error);
+        throw new Error(error.message);
+    }
+    return { data, error: null };
+};
+
+// Eliminación masiva de pólizas
+export const deletePolicies = async (ids: string[]) => {
+    // Si hay FKs con ON DELETE CASCADE, bastará con borrar de policies
+    const { error } = await supabase
+        .from('policies')
+        .delete()
+        .in('id', ids);
+
+    if (error) {
+        console.error('Error deleting policies:', error);
+        throw new Error(error.message);
+    }
+};
 
 export const createDocument = async (policyId: string, title: string, role: string): Promise<any> => {
     const { data, error } = await supabase

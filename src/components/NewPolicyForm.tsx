@@ -55,6 +55,12 @@ export const NewPolicyForm: React.FC<{ onPolicyCreated: (policy: Policy) => void
         { nombre: '', rfc: '', correo: '', direccion: '', telefono: '', fechanacimiento: '', municipio: '' }
       ],
       policyNumber: '',
+      inciso: undefined,
+      concepto: '',
+      modelo: '',
+      numeroSerie: '',
+      clienteId: '',
+      claveAgente: '',
       ramo: '',
       subproducto: '',
       aseguradora: '',
@@ -62,7 +68,12 @@ export const NewPolicyForm: React.FC<{ onPolicyCreated: (policy: Policy) => void
       formaDePago: '',
       conductoDePago: '',
       moneda: '',
-      premiumAmount: 0,
+      primaNeta: 0,
+      derecho: 0,
+      recargo: 0,
+      total: 0,
+      tipoDeCargo: '',
+      fechaRegistro: '',
       fechaPagoActual: '',
       vigenciaPeriodo: { inicio: '', fin: '' },
       vigenciaTotal: { inicio: '', fin: '' },
@@ -217,6 +228,30 @@ export const NewPolicyForm: React.FC<{ onPolicyCreated: (policy: Policy) => void
           {errors.policyNumber && <span className="text-red-500 text-xs">El número de póliza es obligatorio</span>}
         </div>
         <div>
+          <Label htmlFor="inciso">Inciso</Label>
+          <Input id="inciso" type="number" {...register('inciso')} />
+        </div>
+        <div>
+          <Label htmlFor="concepto">Concepto</Label>
+          <Input id="concepto" {...register('concepto')} />
+        </div>
+        <div>
+          <Label htmlFor="modelo">Modelo</Label>
+          <Input id="modelo" {...register('modelo')} />
+        </div>
+        <div>
+          <Label htmlFor="numeroSerie">No. Serie</Label>
+          <Input id="numeroSerie" {...register('numeroSerie')} />
+        </div>
+        <div>
+          <Label htmlFor="clienteId">Cliente ID</Label>
+          <Input id="clienteId" {...register('clienteId')} />
+        </div>
+        <div>
+          <Label htmlFor="claveAgente">Clave de Agente</Label>
+          <Input id="claveAgente" {...register('claveAgente')} />
+        </div>
+        <div>
           <Label htmlFor="ramo">Ramo <Tooltip text="Categoría principal del seguro (Vida, Gastos Médicos, Autos, Daños, etc.)" /></Label>
           <Controller
             name="ramo"
@@ -245,6 +280,22 @@ export const NewPolicyForm: React.FC<{ onPolicyCreated: (policy: Policy) => void
         <div>
           <Label htmlFor="sumaAsegurada">Suma asegurada</Label>
           <Input id="sumaAsegurada" type="number" step="any" {...register('sumaAsegurada')} />
+        </div>
+        <div>
+          <Label htmlFor="primaNeta">Prima Neta</Label>
+          <Input id="primaNeta" type="number" step="any" {...register('primaNeta')} />
+        </div>
+        <div>
+          <Label htmlFor="derecho">Derecho</Label>
+          <Input id="derecho" type="number" step="any" {...register('derecho')} />
+        </div>
+        <div>
+          <Label htmlFor="recargo">Recargo</Label>
+          <Input id="recargo" type="number" step="any" {...register('recargo')} />
+        </div>
+        <div>
+          <Label htmlFor="total">Total</Label>
+          <Input id="total" type="number" step="any" {...register('total')} />
         </div>
         <div>
           <Label htmlFor="formaDePago">Forma de pago</Label>
@@ -282,6 +333,23 @@ export const NewPolicyForm: React.FC<{ onPolicyCreated: (policy: Policy) => void
           />
         </div>
         <div>
+          <Label htmlFor="tipoDeCargo">Tipo de Cargo</Label>
+          <Controller
+            name="tipoDeCargo"
+            control={control}
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger><SelectValue placeholder="Selecciona el tipo de cargo" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CAT">CAT</SelectItem>
+                  <SelectItem value="CXC">CXC</SelectItem>
+                  <SelectItem value="CUT">CUT</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+        <div>
           <Label htmlFor="moneda">Moneda</Label>
           <Controller
             name="moneda"
@@ -292,16 +360,10 @@ export const NewPolicyForm: React.FC<{ onPolicyCreated: (policy: Policy) => void
                 <SelectContent>
                   <SelectItem value="MXN">Peso (MXN)</SelectItem>
                   <SelectItem value="USD">Dólar (USD)</SelectItem>
-                  <SelectItem value="EUR">Euro (EUR)</SelectItem>
-                  <SelectItem value="UDIs">UDIs</SelectItem>
                 </SelectContent>
               </Select>
             )}
           />
-        </div>
-        <div>
-          <Label htmlFor="premiumAmount">Prima/Pago</Label>
-          <Input id="premiumAmount" type="number" step="any" {...register('premiumAmount')} />
         </div>
         <div>
           <Label htmlFor="comprobantePago">Comprobante de Pago</Label>
@@ -320,12 +382,24 @@ export const NewPolicyForm: React.FC<{ onPolicyCreated: (policy: Policy) => void
       {/* Fechas críticas de la póliza */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md bg-gray-50">
         <div>
-          <Label htmlFor="vigenciaPeriodoInicio">Fecha de inicio de la póliza</Label>
+          <Label htmlFor="vigenciaPeriodoInicio">Vigencia del Recibo - Inicio</Label>
           <Input id="vigenciaPeriodoInicio" type="date" {...register('vigenciaPeriodo.inicio')} />
         </div>
         <div>
-          <Label htmlFor="vigenciaPeriodoFin">Fecha de fin de la póliza</Label>
+          <Label htmlFor="vigenciaPeriodoFin">Vigencia del Recibo - Fin</Label>
           <Input id="vigenciaPeriodoFin" type="date" {...register('vigenciaPeriodo.fin')} />
+        </div>
+        <div>
+          <Label htmlFor="vigenciaTotalInicio">Vigencia Total de Póliza - Inicio</Label>
+          <Input id="vigenciaTotalInicio" type="date" {...register('vigenciaTotal.inicio')} />
+        </div>
+        <div>
+          <Label htmlFor="vigenciaTotalFin">Vigencia Total de Póliza - Fin</Label>
+          <Input id="vigenciaTotalFin" type="date" {...register('vigenciaTotal.fin')} />
+        </div>
+        <div>
+          <Label htmlFor="fechaRegistro">Fecha de Registro</Label>
+          <Input id="fechaRegistro" type="date" {...register('fechaRegistro')} />
         </div>
         <div>
           <Label htmlFor="terminoPagos">Fecha de término de pagos</Label>
@@ -334,10 +408,6 @@ export const NewPolicyForm: React.FC<{ onPolicyCreated: (policy: Policy) => void
         <div>
           <Label htmlFor="fechaPagoActual">Fecha de pago actual</Label>
           <Input id="fechaPagoActual" type="date" {...register('fechaPagoActual')} />
-        </div>
-        <div>
-          <Label htmlFor="vigenciaTotalFin">Fecha de vigencia total</Label>
-          <Input id="vigenciaTotalFin" type="date" {...register('vigenciaTotal.fin')} />
         </div>
       </div>
 
