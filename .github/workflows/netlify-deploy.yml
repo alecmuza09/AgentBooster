@@ -1,0 +1,35 @@
+name: CI & Deploy to Netlify
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Trigger Netlify deploy (Build Hook)
+        if: success()
+        env:
+          NETLIFY_BUILD_HOOK_URL: ${{ secrets.NETLIFY_BUILD_HOOK_URL }}
+        run: |
+          if [ -z "$NETLIFY_BUILD_HOOK_URL" ]; then
+            echo "NETLIFY_BUILD_HOOK_URL secret not set. Skipping Netlify trigger." && exit 0;
+          fi
+          curl -X POST -d '{}' "$NETLIFY_BUILD_HOOK_URL"
+
