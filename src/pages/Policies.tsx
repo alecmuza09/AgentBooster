@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Policy } from '@/types/policy';
-import { getPolicies } from '@/data/policies';
+import { getPolicies, updatePoliciesBulk, deletePolicies } from '@/data/policies';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/Modal';
 import NewPolicyForm from '@/components/NewPolicyForm';
@@ -8,7 +8,7 @@ import { PolicyDocumentManager } from '@/components/PolicyDocumentManager';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { 
-    FilePlus, MoreHorizontal, Search, Filter, X, Calendar, ChevronDown, ChevronUp,
+    FilePlus, MoreHorizontal, Search, Filter, X, ChevronDown, ChevronUp,
     Shield, Users, DollarSign, TrendingUp, FileText, AlertCircle, CheckCircle, Clock
 } from 'lucide-react';
 import { ImportPolizasButton } from '@/components/import/ImportPolizasButton';
@@ -19,6 +19,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
+import { Checkbox } from '@/components/ui/checkbox';
+import BulkEditPoliciesModal from '@/components/BulkEditPoliciesModal';
 import { es } from 'date-fns/locale';
 
 export const Policies = () => {
@@ -39,6 +41,8 @@ export const Policies = () => {
     const [showFilters, setShowFilters] = useState(false);
     const [sortBy, setSortBy] = useState<string>('policyNumber');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
     // Calcular estadísticas de pólizas
     const policyStats = useMemo(() => {
@@ -46,7 +50,7 @@ export const Policies = () => {
         const active = policies.filter(p => p.status === 'active').length;
         const cancelled = policies.filter(p => p.status === 'cancelled').length;
         const pending = policies.filter(p => p.status === 'pending').length;
-        const totalPremium = policies.reduce((sum, p) => sum + (p.premiumAmount || 0), 0);
+        const totalPremium = policies.reduce((sum, p) => sum + (Number((p as any).total ?? (p as any).primaNeta ?? 0)), 0);
         const avgPremium = total > 0 ? totalPremium / total : 0;
         const overduePolicies = policies.filter(p => {
             if (!p.fechaPagoActual) return false;
@@ -80,6 +84,35 @@ export const Policies = () => {
             setIsLoading(false);
         }
     };
+    const toggleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedIds(new Set(filteredAndSortedPolicies.map(p => p.id)));
+        } else {
+            setSelectedIds(new Set());
+        }
+    };
+
+    const toggleSelectOne = (id: string, checked: boolean) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (checked) next.add(id); else next.delete(id);
+            return next;
+        });
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.size === 0) return;
+        await deletePolicies(Array.from(selectedIds));
+        await fetchPolicies();
+        setSelectedIds(new Set());
+    };
+
+    const handleBulkApply = async (updates: any) => {
+        if (selectedIds.size === 0) return;
+        await updatePoliciesBulk(Array.from(selectedIds), updates);
+        await fetchPolicies();
+        setSelectedIds(new Set());
+    };
 
     useEffect(() => {
         fetchPolicies();
@@ -101,11 +134,15 @@ export const Policies = () => {
         let filtered = policies.filter(policy => {
             // Búsqueda por texto
             const searchLower = searchTerm.toLowerCase();
+            const aseguradoNombre = policy.asegurado?.nombre || '';
+            const contratanteNombre = policy.contratante?.nombre || '';
+            const aseguradoraNombre = policy.aseguradora || '';
+            const policyNumberStr = policy.policyNumber || '';
             const matchesSearch = !searchTerm || 
-                policy.policyNumber.toLowerCase().includes(searchLower) ||
-                policy.contratante.nombre.toLowerCase().includes(searchLower) ||
-                policy.asegurado.nombre.toLowerCase().includes(searchLower) ||
-                policy.aseguradora.toLowerCase().includes(searchLower);
+                policyNumberStr.toLowerCase().includes(searchLower) ||
+                contratanteNombre.toLowerCase().includes(searchLower) ||
+                aseguradoNombre.toLowerCase().includes(searchLower) ||
+                aseguradoraNombre.toLowerCase().includes(searchLower);
 
             // Filtros
             const matchesStatus = statusFilter === 'all' || policy.status === statusFilter;
@@ -152,6 +189,10 @@ export const Policies = () => {
                     aValue = a.policyNumber;
                     bValue = b.policyNumber;
                     break;
+                case 'contratante':
+                    aValue = a.contratante.nombre;
+                    bValue = b.contratante.nombre;
+                    break;
                 case 'asegurado':
                     aValue = a.asegurado.nombre;
                     bValue = b.asegurado.nombre;
@@ -177,25 +218,25 @@ export const Policies = () => {
                     bValue = b.policyNumber;
             }
 
-            if (sortOrder === 'asc') {
-                return aValue.localeCompare(bValue);
-            } else {
-                return bValue.localeCompare(aValue);
-            }
+            const aStr = (aValue ?? '').toString();
+            const bStr = (bValue ?? '').toString();
+            return sortOrder === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
         });
 
         console.log('Filtered and sorted policies:', filtered.length);
         return filtered;
     }, [policies, searchTerm, statusFilter, aseguradoraFilter, ramoFilter, formaPagoFilter, dateRangeFilter, sortBy, sortOrder]);
 
+    const isAllSelected = useMemo(() => (
+        filteredAndSortedPolicies.length > 0 && filteredAndSortedPolicies.every(p => selectedIds.has(p.id))
+    ), [filteredAndSortedPolicies, selectedIds]);
+
     const handlePolicyCreated = (newPolicy: Policy) => {
         setPolicies(prev => [newPolicy, ...prev]);
         setIsNewPolicyModalOpen(false);
     };
 
-    const handleOpenDocumentManager = (policy: Policy) => {
-        setSelectedPolicyForDocs(policy);
-    };
+    // (opcional) abridor de gestor de documentos si se agrega acción en tabla
 
     const handleCloseDocumentManager = () => {
         setSelectedPolicyForDocs(null);
@@ -280,6 +321,16 @@ export const Policies = () => {
                             <FilePlus className="h-4 w-4" />
                             Nueva Póliza
                         </Button>
+                        {selectedIds.size > 0 && (
+                            <div className="flex items-center gap-2">
+                                <Button variant="secondary" onClick={() => setIsBulkModalOpen(true)}>
+                                    Editar seleccionadas ({selectedIds.size})
+                                </Button>
+                                <Button variant="destructive" onClick={handleBulkDelete}>
+                                    Borrar seleccionadas
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -504,6 +555,7 @@ export const Policies = () => {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="policyNumber">Número de Póliza</SelectItem>
+                                        <SelectItem value="contratante">Contratante</SelectItem>
                                         <SelectItem value="asegurado">Asegurado</SelectItem>
                                         <SelectItem value="aseguradora">Aseguradora</SelectItem>
                                         <SelectItem value="ramo">Ramo</SelectItem>
@@ -574,6 +626,9 @@ VITE_SUPABASE_ANON_KEY=tu_clave_anonima_de_supabase`}
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border-b border-gray-200 dark:border-gray-600">
+                                    <TableHead className="w-8">
+                                        <Checkbox checked={isAllSelected} onCheckedChange={(c) => toggleSelectAll(!!c)} />
+                                    </TableHead>
                                     <TableHead 
                                         className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200 font-semibold text-gray-900 dark:text-white"
                                         onClick={() => handleSort('policyNumber')}
@@ -583,6 +638,18 @@ VITE_SUPABASE_ANON_KEY=tu_clave_anonima_de_supabase`}
                                             Número de Póliza
                                             {sortBy === 'policyNumber' && (
                                                 <span className="text-blue-600">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                                            )}
+                                        </div>
+                                    </TableHead>
+                                    <TableHead 
+                                        className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200 font-semibold text-gray-900 dark:text-white"
+                                        onClick={() => handleSort('contratante')}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Users className="h-4 w-4 text-green-600" />
+                                            Contratante
+                                            {sortBy === 'contratante' && (
+                                                <span className="text-green-600">{sortOrder === 'asc' ? '↑' : '↓'}</span>
                                             )}
                                         </div>
                                     </TableHead>
@@ -643,6 +710,9 @@ VITE_SUPABASE_ANON_KEY=tu_clave_anonima_de_supabase`}
                                         key={policy.id} 
                                         className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 border-b border-gray-100 dark:border-gray-600"
                                     >
+                                        <TableCell>
+                                            <Checkbox checked={selectedIds.has(policy.id)} onCheckedChange={(c) => toggleSelectOne(policy.id, !!c)} />
+                                        </TableCell>
                                         <TableCell className="font-medium text-gray-900 dark:text-white">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-2 h-2 rounded-full bg-blue-500"></div>
@@ -650,14 +720,10 @@ VITE_SUPABASE_ANON_KEY=tu_clave_anonima_de_supabase`}
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <div>
-                                                <div className="font-medium text-gray-900 dark:text-white">{policy.asegurado.nombre}</div>
-                                                <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                    {policy.contratante.nombre !== policy.asegurado.nombre && 
-                                                        `Contratante: ${policy.contratante.nombre}`
-                                                    }
-                                                </div>
-                                            </div>
+                                            <div className="font-medium text-gray-900 dark:text-white">{policy.contratante.nombre}</div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="font-medium text-gray-900 dark:text-white">{policy.asegurado.nombre}</div>
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
@@ -746,6 +812,12 @@ VITE_SUPABASE_ANON_KEY=tu_clave_anonima_de_supabase`}
             <PolicyDetailModal
                 policy={selectedPolicyForDetail}
                 onClose={() => setSelectedPolicyForDetail(null)}
+            />
+
+            <BulkEditPoliciesModal
+                isOpen={isBulkModalOpen}
+                onClose={() => setIsBulkModalOpen(false)}
+                onApply={handleBulkApply}
             />
         </div>
     );

@@ -5,6 +5,7 @@ export type Ramo = 'Vida' | 'Gastos Médicos' | 'Autos' | 'Daños';
 export type FormaDePago = 'Anual' | 'Semestral' | 'Trimestral' | 'Mensual';
 export type ConductoDePago = 'Agente' | 'Domiciliado' | 'Tarjeta';
 export type Moneda = 'MXN' | 'USD';
+export type TipoDeCargo = 'CAT' | 'CXC' | 'CUT';
 
 export type PolicyContactRole = 
   | 'contratante'
@@ -44,7 +45,13 @@ export interface PolicyDocument {
 
 export interface Policy {
   id: string;
-  policyNumber: string;
+  policyNumber: string; // numero de poliza
+  inciso?: number;
+  concepto?: string;
+  modelo?: string;
+  numeroSerie?: string;
+  clienteId?: string;
+  claveAgente?: string;
   ramo: string;
   subproducto?: string;
   aseguradora: string;
@@ -52,8 +59,14 @@ export interface Policy {
   formaDePago: FormaDePago;
   conductoDePago: ConductoDePago;
   moneda: Moneda;
+  primaNeta: number;
+  derecho?: number;
+  recargo?: number;
+  total: number;
+  tipoDeCargo?: TipoDeCargo;
+  fechaRegistro?: string;
   sumaAsegurada: number;
-  premiumAmount: number;
+  // premiumAmount: number; // campo obsoleto, usar "total"
   fechaPagoActual?: string;
   vigenciaPeriodo: {
     inicio: string;

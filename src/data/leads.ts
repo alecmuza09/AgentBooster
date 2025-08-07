@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient';
+imporf { supabase } from '../supabaseClient';
 import { Lead, LeadData, LeadStatus } from '../types/lead';
 import { subDays, formatISO } from 'date-fns';
 
