@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { readDB, writeDB } from '../db';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
@@ -16,7 +16,7 @@ const clientSchema = z.object({
 });
 
 // GET /api/clients - Obtener todos los clientes
-router.get('/', async (req, res) => {
+router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const db = await readDB();
     res.json(db.clients || []);
@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/clients - Crear un nuevo cliente
-router.post('/', async (req, res) => {
+router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const validation = clientSchema.safeParse(req.body);
     if (!validation.success) {
@@ -34,7 +34,8 @@ router.post('/', async (req, res) => {
       const errorMessages = Object.entries(formattedErrors)
         .map(([field, messages]) => `${field}: ${messages?.join(', ')}`)
         .join('; ');
-      return res.status(400).json({ message: `Datos de cliente inválidos. ${errorMessages}` });
+      res.status(400).json({ message: `Datos de cliente inválidos. ${errorMessages}` });
+      return;
     }
 
     const db = await readDB();

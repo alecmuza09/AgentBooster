@@ -64,19 +64,28 @@ export interface Policy {
   recargo?: number;
   total: number;
   tipoDeCargo?: TipoDeCargo;
-  fechaRegistro?: string;
   sumaAsegurada: number;
   // premiumAmount: number; // campo obsoleto, usar "total"
-  fechaPagoActual?: string;
-  vigenciaPeriodo: {
+  
+  // === 5 FECHAS CLAVE DE LA PÓLIZA ===
+  fechaSolicitud?: string;        // 1. Fecha de solicitud/creación
+  fechaVigenciaInicial: string;   // 2. Fecha de vigencia inicial
+  fechaVigenciaFinal: string;     // 3. Fecha de vigencia final/término
+  fechaEmision?: string;          // 4. Fecha de emisión formal
+  fechaPrimerPago?: string;       // 5. Fecha de primer pago/pago programado
+  
+  // Campos de fechas adicionales para compatibilidad
+  fechaRegistro?: string;         // Mantenido por compatibilidad
+  fechaPagoActual?: string;       // Fecha de próximo pago
+  vigenciaPeriodo: {              // Vigencia del recibo/período actual
     inicio: string;
     fin: string;
   };
-  vigenciaTotal: {
+  vigenciaTotal: {                // Vigencia total de la póliza (mismo que inicial/final)
     inicio: string;
     fin: string;
   };
-  terminoPagos?: string;
+  terminoPagos?: string;          // Fecha límite de pagos
   contratante: PolicyContact;
   asegurado: PolicyContact;
   dueñoFinal?: PolicyContact;

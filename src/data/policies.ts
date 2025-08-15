@@ -15,7 +15,15 @@ export const examplePolicies: Policy[] = [
         conductoDePago: 'Tarjeta',
         moneda: 'MXN',
         sumaAsegurada: 1000000,
-        premiumAmount: 1500,
+        primaNeta: 1200,
+        total: 1500,
+        // 5 fechas clave
+        fechaSolicitud: '2024-01-15',
+        fechaVigenciaInicial: '2024-01-01',
+        fechaVigenciaFinal: '2025-01-01',
+        fechaEmision: '2024-01-20',
+        fechaPrimerPago: '2024-01-01',
+        // Fechas adicionales
         fechaPagoActual: '2024-06-01',
         vigenciaPeriodo: { inicio: '2024-01-01', fin: '2025-01-01' },
         vigenciaTotal: { inicio: '2024-01-01', fin: '2025-01-01' },
@@ -44,7 +52,15 @@ export const examplePolicies: Policy[] = [
         conductoDePago: 'Transferencia',
         moneda: 'MXN',
         sumaAsegurada: 500000,
-        premiumAmount: 3200,
+        primaNeta: 2800,
+        total: 3200,
+        // 5 fechas clave
+        fechaSolicitud: '2023-01-10',
+        fechaVigenciaInicial: '2023-01-15',
+        fechaVigenciaFinal: '2024-01-15',
+        fechaEmision: '2023-01-12',
+        fechaPrimerPago: '2023-01-15',
+        // Fechas adicionales
         fechaPagoActual: '2024-01-15',
         vigenciaPeriodo: { inicio: '2023-01-15', fin: '2024-01-15' },
         vigenciaTotal: { inicio: '2023-01-15', fin: '2024-01-15' },
@@ -231,8 +247,17 @@ export const getPolicies = async (): Promise<Policy[]> => {
                         recargo: p.recargo || 0,
                         total: p.total || 0,
                         tipoDeCargo: p.tipo_de_cargo ?? undefined,
-                        fechaRegistro: p.fecha_registro ?? undefined,
                         sumaAsegurada: p.suma_asegurada || 0,
+                        
+                        // 5 fechas clave de la póliza
+                        fechaSolicitud: p.fecha_solicitud ?? undefined,
+                        fechaVigenciaInicial: p.fecha_vigencia_inicial || '',
+                        fechaVigenciaFinal: p.fecha_vigencia_final || '',
+                        fechaEmision: p.fecha_emision ?? undefined,
+                        fechaPrimerPago: p.fecha_primer_pago ?? undefined,
+                        
+                        // Fechas adicionales para compatibilidad
+                        fechaRegistro: p.fecha_registro ?? undefined,
                         fechaPagoActual: p.fecha_pago_actual,
                         vigenciaPeriodo: { 
                             inicio: p.vigencia_periodo_inicio || '', 
@@ -331,8 +356,17 @@ export const createPolicy = async (policyData: Omit<Policy, 'id' | 'documents' |
             recargo: policyData.recargo,
             total: policyData.total,
             tipo_de_cargo: policyData.tipoDeCargo,
-            fecha_registro: policyData.fechaRegistro,
             suma_asegurada: policyData.sumaAsegurada,
+            
+            // 5 fechas clave de la póliza
+            fecha_solicitud: policyData.fechaSolicitud,
+            fecha_vigencia_inicial: policyData.fechaVigenciaInicial,
+            fecha_vigencia_final: policyData.fechaVigenciaFinal,
+            fecha_emision: policyData.fechaEmision,
+            fecha_primer_pago: policyData.fechaPrimerPago,
+            
+            // Fechas adicionales para compatibilidad
+            fecha_registro: policyData.fechaRegistro,
             fecha_pago_actual: policyData.fechaPagoActual,
             vigencia_periodo_inicio: policyData.vigenciaPeriodo.inicio,
             vigencia_periodo_fin: policyData.vigenciaPeriodo.fin,

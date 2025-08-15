@@ -8,6 +8,7 @@ import { Checkbox } from './ui/checkbox';
 import { Policy, Ramo, FormaDePago, Moneda, PolicyStatus, ConductoDePago } from '../types/policy';
 import { createPolicy } from '../data/policies';
 import { Info } from 'lucide-react';
+import { PolicyDocumentUploader, DocumentToUpload } from './PolicyDocumentUploader';
 
 // Tooltip simple
 const Tooltip: React.FC<{ text: string }> = ({ text }) => (
@@ -46,6 +47,9 @@ const ContactFields: React.FC<{
 );
 
 export const NewPolicyForm: React.FC<{ onPolicyCreated: (policy: Policy) => void }> = ({ onPolicyCreated }) => {
+  // Estado para documentos
+  const [documents, setDocuments] = useState<DocumentToUpload[]>([]);
+  
   const { control, register, handleSubmit, formState: { errors, isSubmitting }, watch, setValue } = useForm<any>({
     defaultValues: {
       contratante: { nombre: '', rfc: '', correo: '', direccion: '', telefono: '', fechanacimiento: '', municipio: '' },
@@ -73,6 +77,13 @@ export const NewPolicyForm: React.FC<{ onPolicyCreated: (policy: Policy) => void
       recargo: 0,
       total: 0,
       tipoDeCargo: '',
+      // 5 fechas clave
+      fechaSolicitud: '',
+      fechaVigenciaInicial: '',
+      fechaVigenciaFinal: '',
+      fechaEmision: '',
+      fechaPrimerPago: '',
+      // Fechas adicionales
       fechaRegistro: '',
       fechaPagoActual: '',
       vigenciaPeriodo: { inicio: '', fin: '' },
@@ -120,11 +131,40 @@ export const NewPolicyForm: React.FC<{ onPolicyCreated: (policy: Policy) => void
         contacto.nombre || contacto.rfc || contacto.correo || contacto.telefono
       ) || [];
 
+      // Sincronizar fechas de vigencia con vigenciaTotal para compatibilidad
+      const vigenciaTotal = {
+        inicio: data.fechaVigenciaInicial || data.vigenciaTotal?.inicio || '',
+        fin: data.fechaVigenciaFinal || data.vigenciaTotal?.fin || ''
+      };
+
+      // Si no se especificó fechaSolicitud, usar la fecha actual
+      const fechaSolicitud = data.fechaSolicitud || new Date().toISOString().split('T')[0];
+
       const policyToSave = {
         ...data,
         contactosPago: contactosPagoFiltrados,
         status: 'active', // Por defecto
+        // Asegurar que las fechas clave estén presentes
+        fechaSolicitud,
+        fechaVigenciaInicial: data.fechaVigenciaInicial,
+        fechaVigenciaFinal: data.fechaVigenciaFinal,
+        fechaEmision: data.fechaEmision,
+        fechaPrimerPago: data.fechaPrimerPago,
+        // Mantener compatibilidad con campos existentes
+        vigenciaTotal
       };
+      
+      console.log('Policy data being saved:', policyToSave);
+      console.log('Documents to attach:', documents);
+      
+      // TODO: Aquí se procesarían los documentos adjuntos
+      // Por ahora solo los registramos en el log
+      if (documents.length > 0) {
+        console.log(`Se adjuntarán ${documents.length} documentos a la póliza:`, 
+          documents.map(doc => ({ title: doc.title, category: doc.category, fileName: doc.file.name }))
+        );
+      }
+      
       const newPolicy = await createPolicy(policyToSave);
       onPolicyCreated(newPolicy);
     } catch (error) {
@@ -379,37 +419,135 @@ export const NewPolicyForm: React.FC<{ onPolicyCreated: (policy: Policy) => void
         </div>
       </div>
 
-      {/* Fechas críticas de la póliza */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md bg-gray-50">
-        <div>
-          <Label htmlFor="vigenciaPeriodoInicio">Vigencia del Recibo - Inicio</Label>
-          <Input id="vigenciaPeriodoInicio" type="date" {...register('vigenciaPeriodo.inicio')} />
+      {/* 5 FECHAS CLAVE DE LA PÓLIZA */}
+      <div className="border p-4 rounded-md bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+        <div className="flex items-center gap-2 mb-4">
+          <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200">📅 Fechas Clave de la Póliza</h3>
+          <Tooltip text="Las 5 fechas fundamentales para la gestión correcta de la póliza" />
         </div>
-        <div>
-          <Label htmlFor="vigenciaPeriodoFin">Vigencia del Recibo - Fin</Label>
-          <Input id="vigenciaPeriodoFin" type="date" {...register('vigenciaPeriodo.fin')} />
-        </div>
-        <div>
-          <Label htmlFor="vigenciaTotalInicio">Vigencia Total de Póliza - Inicio</Label>
-          <Input id="vigenciaTotalInicio" type="date" {...register('vigenciaTotal.inicio')} />
-        </div>
-        <div>
-          <Label htmlFor="vigenciaTotalFin">Vigencia Total de Póliza - Fin</Label>
-          <Input id="vigenciaTotalFin" type="date" {...register('vigenciaTotal.fin')} />
-        </div>
-        <div>
-          <Label htmlFor="fechaRegistro">Fecha de Registro</Label>
-          <Input id="fechaRegistro" type="date" {...register('fechaRegistro')} />
-        </div>
-        <div>
-          <Label htmlFor="terminoPagos">Fecha de término de pagos</Label>
-          <Input id="terminoPagos" type="date" {...register('terminoPagos')} />
-        </div>
-        <div>
-          <Label htmlFor="fechaPagoActual">Fecha de pago actual</Label>
-          <Input id="fechaPagoActual" type="date" {...register('fechaPagoActual')} />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* 1. Fecha de Solicitud/Creación */}
+          <div className="space-y-2">
+            <Label htmlFor="fechaSolicitud" className="flex items-center gap-2">
+              <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full text-xs font-medium">1</span>
+              Fecha de Solicitud
+            </Label>
+            <Input 
+              id="fechaSolicitud" 
+              type="date" 
+              {...register('fechaSolicitud')}
+              className="border-blue-200 dark:border-blue-700 focus:border-blue-400 dark:focus:border-blue-500"
+            />
+            <p className="text-xs text-gray-600 dark:text-gray-400">Cuando se inició el proceso</p>
+          </div>
+
+          {/* 2. Fecha de Vigencia Inicial */}
+          <div className="space-y-2">
+            <Label htmlFor="fechaVigenciaInicial" className="flex items-center gap-2">
+              <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium">2</span>
+              Vigencia Inicial *
+            </Label>
+            <Input 
+              id="fechaVigenciaInicial" 
+              type="date" 
+              {...register('fechaVigenciaInicial', { required: 'La fecha de vigencia inicial es obligatoria' })}
+              className="border-green-200 dark:border-green-700 focus:border-green-400 dark:focus:border-green-500"
+            />
+            <p className="text-xs text-gray-600 dark:text-gray-400">Inicio de la cobertura</p>
+            {errors.fechaVigenciaInicial && <span className="text-red-500 text-xs">{errors.fechaVigenciaInicial.message}</span>}
+          </div>
+
+          {/* 3. Fecha de Vigencia Final */}
+          <div className="space-y-2">
+            <Label htmlFor="fechaVigenciaFinal" className="flex items-center gap-2">
+              <span className="bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-2 py-1 rounded-full text-xs font-medium">3</span>
+              Vigencia Final *
+            </Label>
+            <Input 
+              id="fechaVigenciaFinal" 
+              type="date" 
+              {...register('fechaVigenciaFinal', { required: 'La fecha de vigencia final es obligatoria' })}
+              className="border-orange-200 dark:border-orange-700 focus:border-orange-400 dark:focus:border-orange-500"
+            />
+            <p className="text-xs text-gray-600 dark:text-gray-400">Fin de la cobertura</p>
+            {errors.fechaVigenciaFinal && <span className="text-red-500 text-xs">{errors.fechaVigenciaFinal.message}</span>}
+          </div>
+
+          {/* 4. Fecha de Emisión */}
+          <div className="space-y-2">
+            <Label htmlFor="fechaEmision" className="flex items-center gap-2">
+              <span className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded-full text-xs font-medium">4</span>
+              Fecha de Emisión
+            </Label>
+            <Input 
+              id="fechaEmision" 
+              type="date" 
+              {...register('fechaEmision')}
+              className="border-purple-200 dark:border-purple-700 focus:border-purple-400 dark:focus:border-purple-500"
+            />
+            <p className="text-xs text-gray-600 dark:text-gray-400">Emisión formal de la póliza</p>
+          </div>
+
+          {/* 5. Fecha de Primer Pago */}
+          <div className="space-y-2">
+            <Label htmlFor="fechaPrimerPago" className="flex items-center gap-2">
+              <span className="bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 px-2 py-1 rounded-full text-xs font-medium">5</span>
+              Primer Pago/Programado
+            </Label>
+            <Input 
+              id="fechaPrimerPago" 
+              type="date" 
+              {...register('fechaPrimerPago')}
+              className="border-indigo-200 dark:border-indigo-700 focus:border-indigo-400 dark:focus:border-indigo-500"
+            />
+            <p className="text-xs text-gray-600 dark:text-gray-400">Primera prima o pago programado</p>
+          </div>
         </div>
       </div>
+
+      {/* Fechas Adicionales de Gestión */}
+      <div className="border p-4 rounded-md bg-gray-50 dark:bg-gray-800/50">
+        <div className="flex items-center gap-2 mb-4">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">📋 Fechas Adicionales de Gestión</h3>
+          <Tooltip text="Fechas complementarias para el control y seguimiento de la póliza" />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="vigenciaPeriodoInicio">Vigencia del Recibo - Inicio</Label>
+            <Input id="vigenciaPeriodoInicio" type="date" {...register('vigenciaPeriodo.inicio')} />
+            <p className="text-xs text-gray-500 dark:text-gray-400">Período del recibo actual</p>
+          </div>
+          <div>
+            <Label htmlFor="vigenciaPeriodoFin">Vigencia del Recibo - Fin</Label>
+            <Input id="vigenciaPeriodoFin" type="date" {...register('vigenciaPeriodo.fin')} />
+            <p className="text-xs text-gray-500 dark:text-gray-400">Fin del período del recibo</p>
+          </div>
+          <div>
+            <Label htmlFor="fechaRegistro">Fecha de Registro</Label>
+            <Input id="fechaRegistro" type="date" {...register('fechaRegistro')} />
+            <p className="text-xs text-gray-500 dark:text-gray-400">Registro en el sistema</p>
+          </div>
+          <div>
+            <Label htmlFor="terminoPagos">Término de Pagos</Label>
+            <Input id="terminoPagos" type="date" {...register('terminoPagos')} />
+            <p className="text-xs text-gray-500 dark:text-gray-400">Fecha límite de pagos</p>
+          </div>
+          <div>
+            <Label htmlFor="fechaPagoActual">Próximo Pago</Label>
+            <Input id="fechaPagoActual" type="date" {...register('fechaPagoActual')} />
+            <p className="text-xs text-gray-500 dark:text-gray-400">Fecha del próximo pago</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Documentos de la Póliza */}
+      <PolicyDocumentUploader
+        documents={documents}
+        onDocumentsChange={setDocuments}
+        className="border p-4 rounded-md bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20"
+      />
 
       {/* Comentarios y Justificación */}
       <div className="border p-4 rounded-md bg-gray-50">

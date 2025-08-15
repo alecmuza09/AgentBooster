@@ -8,12 +8,12 @@ import { PolicyDocumentManager } from '@/components/PolicyDocumentManager';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { 
-    FilePlus, MoreHorizontal, Search, Filter, X, ChevronDown, ChevronUp,
+    FilePlus, MoreHorizontal, Filter, X, ChevronDown, ChevronUp,
     Shield, Users, DollarSign, TrendingUp, FileText, AlertCircle, CheckCircle, Clock
 } from 'lucide-react';
 import { ImportPolizasButton } from '@/components/import/ImportPolizasButton';
 import { PolicyDetailModal } from '@/components/PolicyDetailModal';
-import { Input } from '@/components/ui/input';
+import { PredictiveSearchInput } from '@/components/PredictiveSearchInput';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -132,16 +132,20 @@ export const Policies = () => {
     const filteredAndSortedPolicies = useMemo(() => {
         console.log('Filtering policies. Total policies:', policies.length);
         let filtered = policies.filter(policy => {
-            // Búsqueda por texto
+            // Búsqueda por texto mejorada (incluye RFC)
             const searchLower = searchTerm.toLowerCase();
             const aseguradoNombre = policy.asegurado?.nombre || '';
+            const aseguradoRfc = policy.asegurado?.rfc || '';
             const contratanteNombre = policy.contratante?.nombre || '';
+            const contratanteRfc = policy.contratante?.rfc || '';
             const aseguradoraNombre = policy.aseguradora || '';
             const policyNumberStr = policy.policyNumber || '';
             const matchesSearch = !searchTerm || 
                 policyNumberStr.toLowerCase().includes(searchLower) ||
                 contratanteNombre.toLowerCase().includes(searchLower) ||
+                contratanteRfc.toLowerCase().includes(searchLower) ||
                 aseguradoNombre.toLowerCase().includes(searchLower) ||
+                aseguradoRfc.toLowerCase().includes(searchLower) ||
                 aseguradoraNombre.toLowerCase().includes(searchLower);
 
             // Filtros
@@ -447,18 +451,13 @@ export const Policies = () => {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    {/* Búsqueda principal */}
-                    <div className="relative">
-                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                            <Search className="h-5 w-5" />
-                        </div>
-                        <Input
-                            placeholder="Buscar por número de póliza, cliente, aseguradora..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 h-12 text-base border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400"
-                        />
-                    </div>
+                    {/* Búsqueda principal con autocompletado */}
+                    <PredictiveSearchInput
+                        policies={policies}
+                        value={searchTerm}
+                        onChange={setSearchTerm}
+                        placeholder="Buscar por nombre, RFC, número de póliza, aseguradora..."
+                    />
 
                     {/* Filtros expandibles */}
                     {showFilters && (

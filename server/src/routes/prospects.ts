@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { readDB, writeDB } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -12,7 +12,7 @@ interface Prospect {
 }
 
 // GET /api/prospects
-router.get('/', async (req, res) => {
+router.get('/', async (req: Request, res: Response): Promise<void> => {
     try {
         const db = await readDB();
         res.json(db.prospects || []);
@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/prospects
-router.post('/', async (req, res) => {
+router.post('/', async (req: Request, res: Response): Promise<void> => {
     try {
         const db = await readDB();
         const newProspectData = req.body;
@@ -39,7 +39,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/prospects/:id
-router.put('/:id', async (req, res) => {
+router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     try {
         const db = await readDB();
         const { id } = req.params;
@@ -47,7 +47,8 @@ router.put('/:id', async (req, res) => {
         
         const prospectIndex = db.prospects.findIndex((p: any) => p.id === id);
         if (prospectIndex === -1) {
-            return res.status(404).json({ message: 'Prospecto no encontrado' });
+            res.status(404).json({ message: 'Prospecto no encontrado' });
+            return;
         }
 
         if (stage === 'client') {
@@ -61,7 +62,6 @@ router.put('/:id', async (req, res) => {
                 status: 'active',
                 policyCount: 0,
                 assignedAdvisor: 'Por asignar',
-                // Asegúrate de que los campos coinciden con el schema de cliente
             };
             
             db.clients = db.clients || [];
@@ -69,7 +69,8 @@ router.put('/:id', async (req, res) => {
             db.prospects.splice(prospectIndex, 1);
             
             await writeDB(db);
-            return res.status(200).json({ message: 'Prospecto convertido a cliente', newClient });
+            res.status(200).json({ message: 'Prospecto convertido a cliente', newClient });
+            return;
         }
 
         const updatedProspect = { ...db.prospects[prospectIndex], ...updatedData, stage };

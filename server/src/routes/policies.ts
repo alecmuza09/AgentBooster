@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { readDB, writeDB } from '../db';
 import { v4 as uuidv4 } from 'uuid';
@@ -27,7 +27,7 @@ const policySchema = z.object({
 });
 
 // GET /api/policies - Obtener todas las pólizas
-router.get('/', async (req, res) => {
+router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const db = await readDB();
     res.json(db.policies || []);
@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/policies - Crear una nueva póliza
-router.post('/', async (req, res) => {
+router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const validation = policySchema.safeParse(req.body);
     if (!validation.success) {
@@ -45,7 +45,8 @@ router.post('/', async (req, res) => {
       const errorMessages = Object.entries(formattedErrors)
         .map(([field, messages]) => `${field}: ${messages?.join(', ')}`)
         .join('; ');
-      return res.status(400).json({ message: `Datos de póliza inválidos. ${errorMessages}` });
+      res.status(400).json({ message: `Datos de póliza inválidos. ${errorMessages}` });
+      return;
     }
 
     const db = await readDB();
