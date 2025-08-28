@@ -8,12 +8,15 @@ import { PolicyDocumentManager } from '@/components/PolicyDocumentManager';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { 
-    FilePlus, MoreHorizontal, Filter, X, ChevronDown, ChevronUp,
+    FilePlus, MoreHorizontal, Filter, X, ChevronDown, ChevronUp, RefreshCw,
     Shield, Users, DollarSign, TrendingUp, FileText, AlertCircle, CheckCircle, Clock
 } from 'lucide-react';
 import { ImportPolizasButton } from '@/components/import/ImportPolizasButton';
 import { PolicyDetailModal } from '@/components/PolicyDetailModal';
 import { PredictiveSearchInput } from '@/components/PredictiveSearchInput';
+import { updatePolicyStatuses } from '@/utils/paymentUtils';
+import { PolicyHistoryModule } from '@/components/PolicyHistoryModule';
+import { RenewalAlertSystem } from '@/components/RenewalAlertSystem';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +33,8 @@ export const Policies = () => {
     const [isNewPolicyModalOpen, setIsNewPolicyModalOpen] = useState(false);
     const [selectedPolicyForDocs, setSelectedPolicyForDocs] = useState<Policy | null>(null);
     const [selectedPolicyForDetail, setSelectedPolicyForDetail] = useState<Policy | null>(null);
+    const [selectedPolicyForHistory, setSelectedPolicyForHistory] = useState<Policy | null>(null);
+    const [showRenewalAlerts, setShowRenewalAlerts] = useState(true);
 
     // Estados para filtros y búsqueda
     const [searchTerm, setSearchTerm] = useState('');
@@ -76,7 +81,9 @@ export const Policies = () => {
             console.log('Fetching policies...');
             const data = await getPolicies();
             console.log('Policies fetched:', data);
-            setPolicies(data);
+            // Actualizar automáticamente los estados basados en vencimientos
+            const updatedPolicies = updatePolicyStatuses(data);
+            setPolicies(updatedPolicies);
         } catch (err: any) {
             console.error('Error fetching policies:', err);
             setError(err.message);
@@ -290,7 +297,20 @@ export const Policies = () => {
             case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
             case 'expired': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
             case 'pending_renewal': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+            case 'overdue_critical': return 'bg-red-600 text-white animate-pulse border-2 border-red-400';
             default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+        }
+    };
+
+    const getStatusLabel = (status: string) => {
+        switch (status) {
+            case 'active': return 'Activa';
+            case 'cancelled': return 'Cancelada';
+            case 'pending': return 'Pendiente';
+            case 'expired': return 'Expirada';
+            case 'pending_renewal': return 'Renovación Pendiente';
+            case 'overdue_critical': return '🚨 VENCIDO CRÍTICO';
+            default: return status;
         }
     };
 
@@ -318,13 +338,23 @@ export const Policies = () => {
                     {/* Acciones principales */}
                     <div className="flex flex-wrap gap-3">
                         <ImportPolizasButton />
-                        <Button 
-                            onClick={() => setIsNewPolicyModalOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                        >
-                            <FilePlus className="h-4 w-4" />
-                            Nueva Póliza
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowRenewalAlerts(!showRenewalAlerts)}
+                                className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                            >
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                {showRenewalAlerts ? 'Ocultar' : 'Mostrar'} Renovaciones
+                            </Button>
+                            <Button 
+                                onClick={() => setIsNewPolicyModalOpen(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                            >
+                                <FilePlus className="h-4 w-4" />
+                                Nueva Póliza
+                            </Button>
+                        </div>
                         {selectedIds.size > 0 && (
                             <div className="flex items-center gap-2">
                                 <Button variant="secondary" onClick={() => setIsBulkModalOpen(true)}>
@@ -338,6 +368,25 @@ export const Policies = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Sistema de Alertas de Renovación */}
+            {!isLoading && showRenewalAlerts && (
+                <RenewalAlertSystem
+                    policies={policies}
+                    onProcessRenewal={(policyId) => {
+                        // Actualizar el estado de la póliza cuando se procese la renovación
+                        setPolicies(prev => prev.map(policy => 
+                            policy.id === policyId 
+                                ? { ...policy, status: 'pending_renewal' }
+                                : policy
+                        ));
+                    }}
+                    onViewPolicy={(policyId) => {
+                        const policy = policies.find(p => p.id === policyId);
+                        if (policy) setSelectedPolicyForDetail(policy);
+                    }}
+                />
+            )}
 
             {/* Estadísticas de Pólizas */}
             {!isLoading && (
@@ -743,7 +792,7 @@ VITE_SUPABASE_ANON_KEY=tu_clave_anonima_de_supabase`}
                                         <TableCell>
                                             <div className="flex flex-col gap-1">
                                                 <Badge className={`${getStatusBadgeColor(policy.status)} font-medium`}>
-                                                    {policy.status}
+                                                    {getStatusLabel(policy.status)}
                                                 </Badge>
                                                 {policy.fechaPagoActual && (
                                                     <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
@@ -754,14 +803,25 @@ VITE_SUPABASE_ANON_KEY=tu_clave_anonima_de_supabase`}
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => setSelectedPolicyForDetail(policy)}
-                                                className="hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
-                                            >
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setSelectedPolicyForHistory(policy)}
+                                                    className="hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-400 transition-colors duration-200"
+                                                    title="Ver historial y renovaciones"
+                                                >
+                                                    <FileText className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setSelectedPolicyForDetail(policy)}
+                                                    className="hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
+                                                >
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 )) : (
@@ -818,6 +878,25 @@ VITE_SUPABASE_ANON_KEY=tu_clave_anonima_de_supabase`}
                 onClose={() => setIsBulkModalOpen(false)}
                 onApply={handleBulkApply}
             />
+
+            {/* Modal de Historial de Póliza */}
+            <Modal 
+                isOpen={!!selectedPolicyForHistory} 
+                onClose={() => setSelectedPolicyForHistory(null)} 
+                title={`Historial - ${selectedPolicyForHistory?.policyNumber || ''}`}
+                size="xl"
+            >
+                {selectedPolicyForHistory && (
+                    <PolicyHistoryModule
+                        policy={selectedPolicyForHistory}
+                        onUpdatePolicy={(updatedPolicy) => {
+                            setPolicies(prev => prev.map(p => 
+                                p.id === updatedPolicy.id ? updatedPolicy : p
+                            ));
+                        }}
+                    />
+                )}
+            </Modal>
         </div>
     );
 };

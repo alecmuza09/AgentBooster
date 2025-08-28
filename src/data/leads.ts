@@ -156,4 +156,4 @@ export const mockLeads: Lead[] = [
       createdAt: formatISO(subDays(now, 35)),
       statusUpdatedAt: formatISO(subDays(now, 15)),
     }
-]; 
+];

@@ -14,7 +14,9 @@ import { Modal } from '../components/Modal';
 import { NewPolicyForm } from '../components/NewPolicyForm';
 import { NewDocumentForm } from '../components/NewDocumentForm';
 import { NewClientForm } from '../components/NewClientForm';
-import { PolicyAlerts } from '../components/PolicyAlerts';
+import { PaymentAlertSystem } from '../components/PaymentAlertSystem';
+import { RenewalAlertSystem } from '../components/RenewalAlertSystem';
+import { updatePolicyStatuses } from '../utils/paymentUtils';
 import { useAuth } from '../contexts/AuthContext';
 import { getPolicies } from '../data/policies';
 import { getLeads } from '../data/leads';
@@ -347,8 +349,39 @@ export const Dashboard = () => {
                 </div>
             ) : (
                 <>
-                    {/* Alertas de Pólizas */}
-                    <PolicyAlerts policies={policies} />
+                    {/* Sistema de Cobranza y Alertas */}
+                    <PaymentAlertSystem 
+                        policies={updatePolicyStatuses(policies)}
+                        onMarkPaymentConfirmed={(policyId) => {
+                            // Actualizar el estado de la póliza cuando se confirme el pago
+                            setPolicies(prev => prev.map(policy => 
+                                policy.id === policyId 
+                                    ? { ...policy, fechaPagoActual: new Date().toISOString().split('T')[0], status: 'active', hasPendingPayment: false }
+                                    : policy
+                            ));
+                        }}
+                        onViewPolicy={(policyId) => {
+                            // Navegar a la vista detallada de la póliza
+                            navigate(`/policies?highlight=${policyId}`);
+                        }}
+                    />
+
+                    {/* Sistema de Alertas de Renovación */}
+                    <RenewalAlertSystem
+                        policies={updatePolicyStatuses(policies)}
+                        onProcessRenewal={(policyId) => {
+                            // Actualizar el estado de la póliza cuando se procese la renovación
+                            setPolicies(prev => prev.map(policy => 
+                                policy.id === policyId 
+                                    ? { ...policy, status: 'pending_renewal' }
+                                    : policy
+                            ));
+                        }}
+                        onViewPolicy={(policyId) => {
+                            // Navegar a la vista detallada de la póliza
+                            navigate(`/policies?highlight=${policyId}`);
+                        }}
+                    />
 
                     {/* Estadísticas principales con datos reales */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

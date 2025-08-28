@@ -1,4 +1,4 @@
-export type PolicyStatus = 'active' | 'pending' | 'expired' | 'cancelled' | 'pending_renewal';
+export type PolicyStatus = 'active' | 'pending' | 'expired' | 'cancelled' | 'pending_renewal' | 'overdue_critical';
 
 // Nuevos tipos para los campos de póliza
 export type Ramo = 'Vida' | 'Gastos Médicos' | 'Autos' | 'Daños';

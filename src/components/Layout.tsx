@@ -12,6 +12,7 @@ import {
   Mail,
   Megaphone,
   CircleDollarSign,
+  DollarSign,
   LogOut,
   Building2,
   Bell
@@ -42,6 +43,7 @@ export const Layout = () => {
     { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/leads', icon: Briefcase, label: 'Leads' },
     { href: '/policies', icon: FileText, label: 'Pólizas' },
+    { href: '/cobranza', icon: DollarSign, label: 'Cobranza' },
     { href: '/reports', icon: LineChart, label: 'Reportes' },
     { href: '/learning', icon: BookOpen, label: 'Aprendizaje' },
     { href: '/finanzas-360', icon: CircleDollarSign, label: 'Finanzas 360' },

@@ -19,6 +19,7 @@ import { Finanzas360 } from './pages/Finanzas360';
 import { Admin } from './pages/Admin';
 import { CourseDetailAdmin } from './pages/CourseDetailAdmin';
 import DocumentControl from './pages/DocumentControl';
+import { Cobranza } from './pages/Cobranza';
 
 function App() {
   // Eliminar el useEffect temporal que muestra el UUID
@@ -42,6 +43,7 @@ function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="leads" element={<Leads />} />
               <Route path="policies" element={<Policies />} />
+              <Route path="cobranza" element={<Cobranza />} />
               <Route path="document-control" element={<DocumentControl />} />
               <Route path="reports" element={<Reports />} />
               <Route path="learning" element={<Learning />} />
