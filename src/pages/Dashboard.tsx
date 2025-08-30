@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { PaymentAlertSystem } from '@/components/PaymentAlertSystem';
 import { RenewalAlertSystem } from '@/components/RenewalAlertSystem';
-import { 
+import {
   TrendingUp, 
   TrendingDown, 
   Users, 
@@ -74,27 +74,27 @@ interface QuickAction {
 }
 
 export const Dashboard: React.FC = () => {
-  const [policies, setPolicies] = useState<Policy[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+    const [policies, setPolicies] = useState<Policy[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'quarter'>('month');
 
   // Cargar datos
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
         const policiesData = await getPolicies();
         const updatedPolicies = updatePolicyStatuses(policiesData);
         setPolicies(updatedPolicies);
       } catch (err: any) {
         setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-    fetchData();
+        fetchData();
   }, []);
 
   // Calcular estadísticas
@@ -187,7 +187,7 @@ export const Dashboard: React.FC = () => {
           </div>
           <p className="text-red-700 dark:text-red-300 mt-1">{error}</p>
         </div>
-      </div>
+                            </div>
     );
   }
 
@@ -199,14 +199,14 @@ export const Dashboard: React.FC = () => {
         <div className="relative px-6 py-8 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="flex items-center justify-between mb-8">
-              <div>
+                            <div>
                 <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">
                   ¡Bienvenido de vuelta! 👋
-                </h1>
+                                </h1>
                 <p className="text-lg text-slate-600 dark:text-slate-400">
                   Aquí tienes un resumen de tu actividad reciente
-                </p>
-              </div>
+                                </p>
+                            </div>
               <div className="flex items-center gap-3">
                 <Button variant="outline" size="sm">
                   <RefreshCw className="w-4 h-4 mr-2" />
@@ -216,11 +216,11 @@ export const Dashboard: React.FC = () => {
                   <Download className="w-4 h-4 mr-2" />
                   Exportar
                 </Button>
-              </div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
-      </div>
 
       <div className="px-6 lg:px-8 pb-8">
         <div className="mx-auto max-w-7xl space-y-8">
@@ -245,7 +245,7 @@ export const Dashboard: React.FC = () => {
                 <div className="mt-4 flex items-center text-sm">
                   <TrendingUp className="w-4 h-4 mr-1" />
                   <span>+{stats.thisMonthGrowth}% vs mes anterior</span>
-                </div>
+                    </div>
               </CardContent>
             </Card>
 
@@ -255,19 +255,19 @@ export const Dashboard: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-2 bg-white/20 rounded-lg">
                     <Users className="w-6 h-6" />
-                  </div>
+                    </div>
                   <Badge variant="secondary" className="bg-white/20 text-white border-0">
                     {stats.conversionRate}%
                   </Badge>
-                </div>
+                                </div>
                 <div className="space-y-1">
                   <p className="text-2xl font-bold">{stats.totalLeads}</p>
                   <p className="text-green-100 text-sm">Leads Activos</p>
-                </div>
+                                                    </div>
                 <div className="mt-4 flex items-center text-sm">
                   <UserCheck className="w-4 h-4 mr-1" />
                   <span>Tasa de conversión {stats.conversionRate}%</span>
-                </div>
+                                                    </div>
               </CardContent>
             </Card>
 
@@ -277,19 +277,19 @@ export const Dashboard: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-2 bg-white/20 rounded-lg">
                     <DollarSign className="w-6 h-6" />
-                  </div>
+                                                </div>
                   <Badge variant="secondary" className="bg-white/20 text-white border-0">
                     +{stats.lastMonthGrowth}%
                   </Badge>
-                </div>
+                                    </div>
                 <div className="space-y-1">
                   <p className="text-2xl font-bold">${(stats.monthlyRevenue / 1000).toFixed(0)}K</p>
                   <p className="text-purple-100 text-sm">Ingresos Mensuales</p>
-                </div>
+                                </div>
                 <div className="mt-4 flex items-center text-sm">
                   <TrendingUp className="w-4 h-4 mr-1" />
                   <span>+{stats.lastMonthGrowth}% vs mes anterior</span>
-                </div>
+                            </div>
               </CardContent>
             </Card>
 
@@ -307,14 +307,14 @@ export const Dashboard: React.FC = () => {
                 <div className="space-y-1">
                   <p className="text-2xl font-bold">{stats.activePolicies}</p>
                   <p className="text-orange-100 text-sm">Pólizas Activas</p>
-                </div>
+                                </div>
                 <div className="mt-4 flex items-center text-sm">
                   <CheckCircle className="w-4 h-4 mr-1" />
                   <span>{((stats.activePolicies / stats.totalPolicies) * 100).toFixed(1)}% activas</span>
-                </div>
+                                                    </div>
               </CardContent>
             </Card>
-          </div>
+                                                    </div>
 
           {/* Acciones rápidas */}
           <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
@@ -335,15 +335,15 @@ export const Dashboard: React.FC = () => {
                   >
                     <div className={`p-2 rounded-lg bg-gradient-to-br ${action.gradient} text-white`}>
                       {action.icon}
-                    </div>
+                                                </div>
                     <div className="text-left">
                       <p className="font-semibold text-slate-900 dark:text-white">{action.title}</p>
                       <p className="text-sm text-slate-600 dark:text-slate-400">{action.description}</p>
-                    </div>
+                                    </div>
                     <ArrowUpRight className="w-4 h-4 text-slate-400 ml-auto" />
                   </Button>
                 ))}
-              </div>
+                                </div>
             </CardContent>
           </Card>
 
@@ -390,7 +390,7 @@ export const Dashboard: React.FC = () => {
                   />
                 </CardContent>
               </Card>
-            </div>
+                            </div>
 
             {/* Estadísticas adicionales */}
             <div className="space-y-6">
@@ -419,10 +419,10 @@ export const Dashboard: React.FC = () => {
                           <span className="text-sm text-slate-600 dark:text-slate-400 w-8 text-right">
                             {count}
                           </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                 </CardContent>
               </Card>
 
@@ -445,14 +445,14 @@ export const Dashboard: React.FC = () => {
                           <div>
                             <p className="font-medium text-slate-900 dark:text-white text-sm">{aseguradora}</p>
                             <p className="text-xs text-slate-600 dark:text-slate-400">{count} pólizas</p>
-                          </div>
-                        </div>
+                                </div>
+                            </div>
                         <Badge variant="outline" className="text-xs">
                           {((count / stats.totalPolicies) * 100).toFixed(1)}%
                         </Badge>
-                      </div>
-                    ))}
-                  </div>
+                                            </div>
+                                        ))}
+                                    </div>
                 </CardContent>
               </Card>
 
@@ -471,7 +471,7 @@ export const Dashboard: React.FC = () => {
                       <span className="text-sm font-medium text-slate-900 dark:text-white">
                         {stats.activePolicies}/{stats.totalPolicies}
                       </span>
-                    </div>
+                                </div>
                     <Progress 
                       value={(stats.activePolicies / stats.totalPolicies) * 100} 
                       className="h-2"
@@ -482,7 +482,7 @@ export const Dashboard: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-slate-600 dark:text-slate-400">Tasa de Conversión</span>
                       <span className="text-sm font-medium text-green-600">{stats.conversionRate}%</span>
-                    </div>
+                            </div>
                     <Progress 
                       value={stats.conversionRate} 
                       className="h-2 bg-green-100 dark:bg-green-900/20"
@@ -501,10 +501,10 @@ export const Dashboard: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
