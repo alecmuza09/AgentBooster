@@ -514,29 +514,29 @@ export const NewPolicyForm: React.FC<{ onPolicyCreated: (policy: Policy) => void
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div>
-            <Label htmlFor="vigenciaPeriodoInicio">Vigencia del Recibo - Inicio</Label>
-            <Input id="vigenciaPeriodoInicio" type="date" {...register('vigenciaPeriodo.inicio')} />
+        <div>
+          <Label htmlFor="vigenciaPeriodoInicio">Vigencia del Recibo - Inicio</Label>
+          <Input id="vigenciaPeriodoInicio" type="date" {...register('vigenciaPeriodo.inicio')} />
             <p className="text-xs text-gray-500 dark:text-gray-400">Período del recibo actual</p>
-          </div>
-          <div>
-            <Label htmlFor="vigenciaPeriodoFin">Vigencia del Recibo - Fin</Label>
-            <Input id="vigenciaPeriodoFin" type="date" {...register('vigenciaPeriodo.fin')} />
+        </div>
+        <div>
+          <Label htmlFor="vigenciaPeriodoFin">Vigencia del Recibo - Fin</Label>
+          <Input id="vigenciaPeriodoFin" type="date" {...register('vigenciaPeriodo.fin')} />
             <p className="text-xs text-gray-500 dark:text-gray-400">Fin del período del recibo</p>
-          </div>
-          <div>
-            <Label htmlFor="fechaRegistro">Fecha de Registro</Label>
-            <Input id="fechaRegistro" type="date" {...register('fechaRegistro')} />
+        </div>
+        <div>
+          <Label htmlFor="fechaRegistro">Fecha de Registro</Label>
+          <Input id="fechaRegistro" type="date" {...register('fechaRegistro')} />
             <p className="text-xs text-gray-500 dark:text-gray-400">Registro en el sistema</p>
-          </div>
-          <div>
+        </div>
+        <div>
             <Label htmlFor="terminoPagos">Término de Pagos</Label>
-            <Input id="terminoPagos" type="date" {...register('terminoPagos')} />
+          <Input id="terminoPagos" type="date" {...register('terminoPagos')} />
             <p className="text-xs text-gray-500 dark:text-gray-400">Fecha límite de pagos</p>
-          </div>
-          <div>
+        </div>
+        <div>
             <Label htmlFor="fechaPagoActual">Próximo Pago</Label>
-            <Input id="fechaPagoActual" type="date" {...register('fechaPagoActual')} />
+          <Input id="fechaPagoActual" type="date" {...register('fechaPagoActual')} />
             <p className="text-xs text-gray-500 dark:text-gray-400">Fecha del próximo pago</p>
           </div>
         </div>
