@@ -252,7 +252,10 @@ export const Learning = () => {
             {/* Header Principal con Gradiente Elegante */}
             <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 dark:from-purple-900 dark:via-indigo-900 dark:to-blue-900">
                 {/* Elementos decorativos de fondo */}
-                <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.05"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+                <div className="absolute inset-0 opacity-20">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.1)_1px,transparent_0)] bg-[length:20px_20px]"></div>
+                </div>
                 
                 <div className="relative px-6 py-8 lg:px-8 lg:py-12">
                     <div className="mx-auto max-w-7xl">
@@ -513,7 +516,10 @@ export const Learning = () => {
                                     {/* Header de la card con gradiente */}
                                     <div className="relative h-40 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 dark:from-blue-600 dark:via-indigo-600 dark:to-purple-700 flex items-center justify-center overflow-hidden">
                                         {/* Elementos decorativos */}
-                                        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="20" cy="20" r="1"/%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+                                        <div className="absolute inset-0 opacity-30">
+                                            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+                                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.15)_1px,transparent_0)] bg-[length:15px_15px]"></div>
+                                        </div>
                                         
                                         <div className="relative z-10 p-6 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30">
                                             <CategoryIcon className="w-12 h-12 text-white" />
