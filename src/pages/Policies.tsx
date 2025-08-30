@@ -315,52 +315,51 @@ export const Policies = () => {
     };
 
     return (
-        <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 min-h-screen">
-            {/* Header mejorado */}
-            <div className="mb-8">
-                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-                    <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/50 dark:to-indigo-900/50">
-                                <Shield className="w-6 h-6 text-blue-600" />
-                            </div>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+            {/* Header */}
+            <div className="relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 via-indigo-600/10 to-blue-600/10"></div>
+                <div className="relative px-6 py-8 lg:px-8">
+                    <div className="mx-auto max-w-7xl">
+                        <div className="flex items-center justify-between mb-8">
                             <div>
-                                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                                    Gestión de Pólizas
+                                <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">
+                                    Gestión de Pólizas 🛡️
                                 </h1>
-                                <p className="text-gray-600 dark:text-gray-400">
+                                <p className="text-lg text-slate-600 dark:text-slate-400">
                                     Administra y supervisa todas tus pólizas de seguros
                                 </p>
                             </div>
-                        </div>
-                    </div>
-                    
-                    {/* Acciones principales */}
-                    <div className="flex flex-wrap gap-3">
-                        <ImportPolizasButton />
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                onClick={() => setShowRenewalAlerts(!showRenewalAlerts)}
-                                className="border-purple-200 text-purple-700 hover:bg-purple-50"
-                            >
-                                <RefreshCw className="mr-2 h-4 w-4" />
-                                {showRenewalAlerts ? 'Ocultar' : 'Mostrar'} Renovaciones
-                            </Button>
-                            <Button 
-                                onClick={() => setIsNewPolicyModalOpen(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                            >
-                                <FilePlus className="h-4 w-4" />
-                                Nueva Póliza
-                            </Button>
-                        </div>
-                        {selectedIds.size > 0 && (
-                            <div className="flex items-center gap-2">
-                                <Button variant="secondary" onClick={() => setIsBulkModalOpen(true)}>
-                                    Editar seleccionadas ({selectedIds.size})
+                            <div className="flex items-center gap-3">
+                                <ImportPolizasButton />
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowRenewalAlerts(!showRenewalAlerts)}
+                                    className="border-purple-200 text-purple-700 hover:bg-purple-50 dark:border-purple-600 dark:text-purple-400 dark:hover:bg-purple-900/20"
+                                >
+                                    <RefreshCw className="w-4 h-4 mr-2" />
+                                    {showRenewalAlerts ? 'Ocultar' : 'Mostrar'} Renovaciones
                                 </Button>
-                                <Button variant="destructive" onClick={handleBulkDelete}>
+                                <Button 
+                                    onClick={() => setIsNewPolicyModalOpen(true)}
+                                    className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                                >
+                                    <FilePlus className="w-4 h-4 mr-2" />
+                                    Nueva Póliza
+                                </Button>
+                            </div>
+                        </div>
+                        
+                        {selectedIds.size > 0 && (
+                            <div className="flex items-center gap-3 p-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-lg border border-purple-200 dark:border-purple-800 shadow-lg">
+                                <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                    {selectedIds.size} seleccionada{selectedIds.size !== 1 ? 's' : ''}
+                                </Badge>
+                                <Button variant="outline" size="sm" onClick={() => setIsBulkModalOpen(true)}>
+                                    Editar seleccionadas
+                                </Button>
+                                <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
                                     Borrar seleccionadas
                                 </Button>
                             </div>
@@ -388,77 +387,119 @@ export const Policies = () => {
                 />
             )}
 
-            {/* Estadísticas de Pólizas */}
-            {!isLoading && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Pólizas</p>
-                                    <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{policyStats.total}</p>
-                                </div>
-                                <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/50">
-                                    <FileText className="w-6 h-6 text-blue-600" />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+            <div className="px-6 lg:px-8 pb-8">
+                <div className="mx-auto max-w-7xl space-y-8">
+                    
+                    {/* Sistema de Alertas de Renovación */}
+                    {!isLoading && showRenewalAlerts && (
+                        <RenewalAlertSystem
+                            policies={policies}
+                            onProcessRenewal={(policyId) => {
+                                setPolicies(prev => prev.map(policy => 
+                                    policy.id === policyId 
+                                        ? { ...policy, status: 'pending_renewal' }
+                                        : policy
+                                ));
+                            }}
+                            onViewPolicy={(policyId) => {
+                                const policy = policies.find(p => p.id === policyId);
+                                if (policy) setSelectedPolicyForDetail(policy);
+                            }}
+                        />
+                    )}
 
-                    <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-green-600 dark:text-green-400">Pólizas Activas</p>
-                                    <p className="text-2xl font-bold text-green-900 dark:text-green-100">{policyStats.active}</p>
-                                    <p className="text-xs text-green-600 dark:text-green-400">
-                                        {policyStats.total > 0 ? `${((policyStats.active / policyStats.total) * 100).toFixed(1)}%` : '0%'} del total
-                                    </p>
-                                </div>
-                                <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/50">
-                                    <CheckCircle className="w-6 h-6 text-green-600" />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    {/* Métricas principales */}
+                    {!isLoading && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+                                <CardContent className="p-6 relative z-10">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="p-2 bg-white/20 rounded-lg">
+                                            <FileText className="w-6 h-6" />
+                                        </div>
+                                        <Badge variant="secondary" className="bg-white/20 text-white border-0">
+                                            {policyStats.total > 0 ? `${((policyStats.active / policyStats.total) * 100).toFixed(1)}%` : '0%'}
+                                        </Badge>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-2xl font-bold">{policyStats.total}</p>
+                                        <p className="text-purple-100 text-sm">Total Pólizas</p>
+                                    </div>
+                                    <div className="mt-4 flex items-center text-sm">
+                                        <TrendingUp className="w-4 h-4 mr-1" />
+                                        <span>{policyStats.active} activas</span>
+                                    </div>
+                                </CardContent>
+                            </Card>
 
-                    <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-200 dark:border-orange-800">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Pólizas Vencidas</p>
-                                    <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{policyStats.overduePolicies}</p>
-                                    <p className="text-xs text-orange-600 dark:text-orange-400">
-                                        Requieren atención
-                                    </p>
-                                </div>
-                                <div className="p-3 rounded-full bg-orange-100 dark:bg-orange-900/50">
-                                    <AlertCircle className="w-6 h-6 text-orange-600" />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-green-500 to-green-600 text-white">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+                                <CardContent className="p-6 relative z-10">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="p-2 bg-white/20 rounded-lg">
+                                            <CheckCircle className="w-6 h-6" />
+                                        </div>
+                                        <Badge variant="secondary" className="bg-white/20 text-white border-0">
+                                            {policyStats.total > 0 ? `${((policyStats.active / policyStats.total) * 100).toFixed(1)}%` : '0%'}
+                                        </Badge>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-2xl font-bold">{policyStats.active}</p>
+                                        <p className="text-green-100 text-sm">Pólizas Activas</p>
+                                    </div>
+                                    <div className="mt-4 flex items-center text-sm">
+                                        <Shield className="w-4 h-4 mr-1" />
+                                        <span>Vigentes y operativas</span>
+                                    </div>
+                                </CardContent>
+                            </Card>
 
-                    <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-purple-200 dark:border-purple-800">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Prima Total</p>
-                                    <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                                        ${policyStats.totalPremium.toLocaleString()}
-                                    </p>
-                                    <p className="text-xs text-purple-600 dark:text-purple-400">
-                                        Promedio: ${policyStats.avgPremium.toLocaleString()}
-                                    </p>
-                                </div>
-                                <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900/50">
-                                    <DollarSign className="w-6 h-6 text-purple-600" />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
+                            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+                                <CardContent className="p-6 relative z-10">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="p-2 bg-white/20 rounded-lg">
+                                            <AlertCircle className="w-6 h-6" />
+                                        </div>
+                                        <Badge variant="secondary" className="bg-white/20 text-white border-0">
+                                            {policyStats.overduePolicies > 0 ? '⚠️' : '✅'}
+                                        </Badge>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-2xl font-bold">{policyStats.overduePolicies}</p>
+                                        <p className="text-orange-100 text-sm">Pólizas Vencidas</p>
+                                    </div>
+                                    <div className="mt-4 flex items-center text-sm">
+                                        <Clock className="w-4 h-4 mr-1" />
+                                        <span>Requieren atención</span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-indigo-500 to-indigo-600 text-white">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+                                <CardContent className="p-6 relative z-10">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="p-2 bg-white/20 rounded-lg">
+                                            <DollarSign className="w-6 h-6" />
+                                        </div>
+                                        <Badge variant="secondary" className="bg-white/20 text-white border-0">
+                                            ${policyStats.avgPremium.toLocaleString()}
+                                        </Badge>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-2xl font-bold">${(policyStats.totalPremium / 1000).toFixed(0)}K</p>
+                                        <p className="text-indigo-100 text-sm">Prima Total</p>
+                                    </div>
+                                    <div className="mt-4 flex items-center text-sm">
+                                        <TrendingUp className="w-4 h-4 mr-1" />
+                                        <span>Promedio por póliza</span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
 
             {/* Filtros y Búsqueda */}
             <Card className="bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700">
@@ -897,6 +938,8 @@ VITE_SUPABASE_ANON_KEY=tu_clave_anonima_de_supabase`}
                     />
                 )}
             </Modal>
+                </div>
+            </div>
         </div>
     );
 };
