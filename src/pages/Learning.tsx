@@ -4,11 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Progress } from '@/components/ui/progress';
 import { 
     BookOpen, Search, Filter, Play, Clock, Star, Users, Award, 
     TrendingUp, Target, Shield, DollarSign, GraduationCap, 
     Video, FileText, Headphones, CheckCircle, Lock, Unlock,
-    ChevronRight, Calendar, Bookmark, Share2, Download
+    ChevronRight, Calendar, Bookmark, Share2, Download,
+    Zap, Trophy, Brain, Lightbulb, Rocket, Crown, RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -187,13 +189,15 @@ export const Learning = () => {
         const bookmarked = dummyLearningContent.filter(item => item.isBookmarked).length;
         const inProgress = total - completed;
         const totalHours = dummyLearningContent.reduce((sum, item) => sum + item.duration, 0) / 60;
+        const completionRate = total > 0 ? (completed / total) * 100 : 0;
 
         return {
             total,
             completed,
             bookmarked,
             inProgress,
-            totalHours: Math.round(totalHours * 10) / 10
+            totalHours: Math.round(totalHours * 10) / 10,
+            completionRate: Math.round(completionRate * 10) / 10
         };
     }, []);
 
@@ -244,384 +248,437 @@ export const Learning = () => {
     };
 
     return (
-        <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-green-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 min-h-screen">
-            {/* Header mejorado */}
-            <div className="mb-8">
-                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-                    <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 rounded-full bg-gradient-to-r from-green-100 to-blue-100 dark:from-green-900/50 dark:to-blue-900/50">
-                                <BookOpen className="w-6 h-6 text-green-600" />
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-100/50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
+            {/* Header Principal con Gradiente Elegante */}
+            <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 dark:from-purple-900 dark:via-indigo-900 dark:to-blue-900">
+                {/* Elementos decorativos de fondo */}
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.05"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+                
+                <div className="relative px-6 py-8 lg:px-8 lg:py-12">
+                    <div className="mx-auto max-w-7xl">
+                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+                            {/* Título y Descripción */}
+                            <div className="flex-1 space-y-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative">
+                                        <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl blur-xl opacity-30"></div>
+                                        <div className="relative p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
+                                            <GraduationCap className="w-8 h-8 text-white" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h1 className="text-4xl lg:text-5xl font-bold text-white leading-tight">
+                                            Centro de Aprendizaje
+                                        </h1>
+                                        <p className="text-xl text-blue-100 mt-2 max-w-2xl">
+                                            Domina el arte de los seguros con contenido premium diseñado para impulsar tu carrera profesional
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                {/* Progreso de aprendizaje */}
+                                <div className="max-w-md space-y-2">
+                                    <div className="flex justify-between text-sm text-blue-100">
+                                        <span>Progreso General</span>
+                                        <span>{userStats.completionRate}%</span>
+                                    </div>
+                                    <Progress 
+                                        value={userStats.completionRate} 
+                                        className="h-3 bg-white/20"
+                                    />
+                                    <p className="text-xs text-blue-200">
+                                        {userStats.completed} de {userStats.total} cursos completados
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                                    Centro de Aprendizaje
-                                </h1>
-                                <p className="text-gray-600 dark:text-gray-400">
-                                    Mejora tus habilidades y conocimientos en el mundo de los seguros
-                                </p>
+                            
+                            {/* Acciones principales */}
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <Button 
+                                    variant="outline"
+                                    className="border-white/30 text-white hover:bg-white/10 backdrop-blur-sm"
+                                >
+                                    <Bookmark className="h-4 w-4 mr-2" />
+                                    Mis Favoritos
+                                </Button>
+                                <Button 
+                                    className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+                                >
+                                    <Trophy className="h-4 w-4 mr-2" />
+                                    Mis Certificaciones
+                                </Button>
                             </div>
                         </div>
-                    </div>
-                    
-                    {/* Acciones principales */}
-                    <div className="flex flex-wrap gap-3">
-                        <Button 
-                            variant="outline"
-                            className="border-green-300 text-green-600 hover:bg-green-50 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20"
-                        >
-                            <Bookmark className="h-4 w-4 mr-2" />
-                            Mis Favoritos
-                        </Button>
-                        <Button 
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                        >
-                            <Award className="h-4 w-4" />
-                            Mis Certificaciones
-                        </Button>
                     </div>
                 </div>
             </div>
 
-            {/* Estadísticas del usuario */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Cursos</p>
-                                <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{userStats.total}</p>
-                            </div>
-                            <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/50">
-                                <BookOpen className="w-6 h-6 text-blue-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+            <div className="px-6 py-8 lg:px-8 lg:py-12">
+                <div className="mx-auto max-w-7xl space-y-8">
+                    {/* Métricas Principales con Glassmorphism */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                        <Card className="relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 border-0 shadow-xl">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+                            <CardContent className="relative p-6 text-white">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <p className="text-blue-100 text-sm font-medium">Total Cursos</p>
+                                        <p className="text-3xl font-bold">{userStats.total}</p>
+                                        <p className="text-blue-200 text-xs">Disponibles</p>
+                                    </div>
+                                    <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
+                                        <BookOpen className="w-6 h-6" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
 
-                <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-green-600 dark:text-green-400">Completados</p>
-                                <p className="text-2xl font-bold text-green-900 dark:text-green-100">{userStats.completed}</p>
-                                <p className="text-xs text-green-600 dark:text-green-400">
-                                    {userStats.total > 0 ? `${((userStats.completed / userStats.total) * 100).toFixed(1)}%` : '0%'} del total
-                                </p>
-                            </div>
-                            <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/50">
-                                <CheckCircle className="w-6 h-6 text-green-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        <Card className="relative overflow-hidden bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 border-0 shadow-xl">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+                            <CardContent className="relative p-6 text-white">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <p className="text-green-100 text-sm font-medium">Completados</p>
+                                        <p className="text-3xl font-bold">{userStats.completed}</p>
+                                        <p className="text-green-200 text-xs">{userStats.completionRate}% del total</p>
+                                    </div>
+                                    <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
+                                        <CheckCircle className="w-6 h-6" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
 
-                <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 border-yellow-200 dark:border-yellow-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400">En Progreso</p>
-                                <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{userStats.inProgress}</p>
-                                <p className="text-xs text-yellow-600 dark:text-yellow-400">
-                                    Cursos activos
-                                </p>
-                            </div>
-                            <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900/50">
-                                <Clock className="w-6 h-6 text-yellow-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        <Card className="relative overflow-hidden bg-gradient-to-br from-amber-500 to-amber-600 dark:from-amber-600 dark:to-amber-700 border-0 shadow-xl">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+                            <CardContent className="relative p-6 text-white">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <p className="text-amber-100 text-sm font-medium">En Progreso</p>
+                                        <p className="text-3xl font-bold">{userStats.inProgress}</p>
+                                        <p className="text-amber-200 text-xs">Cursos activos</p>
+                                    </div>
+                                    <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
+                                        <Clock className="w-6 h-6" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
 
-                <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-purple-200 dark:border-purple-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Favoritos</p>
-                                <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">{userStats.bookmarked}</p>
-                                <p className="text-xs text-purple-600 dark:text-purple-400">
-                                    Guardados
-                                </p>
-                            </div>
-                            <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900/50">
-                                <Bookmark className="w-6 h-6 text-purple-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        <Card className="relative overflow-hidden bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 border-0 shadow-xl">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+                            <CardContent className="relative p-6 text-white">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <p className="text-purple-100 text-sm font-medium">Favoritos</p>
+                                        <p className="text-3xl font-bold">{userStats.bookmarked}</p>
+                                        <p className="text-purple-200 text-xs">Guardados</p>
+                                    </div>
+                                    <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
+                                        <Bookmark className="w-6 h-6" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
 
-                <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-200 dark:border-orange-800">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Horas Totales</p>
-                                <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{userStats.totalHours}h</p>
-                                <p className="text-xs text-orange-600 dark:text-orange-400">
-                                    Contenido disponible
-                                </p>
-                            </div>
-                            <div className="p-3 rounded-full bg-orange-100 dark:bg-orange-900/50">
-                                <Target className="w-6 h-6 text-orange-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Filtros y Búsqueda */}
-            <Card className="bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700">
-                <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border-b border-gray-200 dark:border-gray-600">
-                    <CardTitle className="flex items-center gap-2">
-                        <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/50">
-                            <Search className="h-5 w-5 text-green-600" />
-                        </div>
-                        <span className="text-gray-900 dark:text-white">Buscar y Filtrar Contenido</span>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    {/* Búsqueda principal */}
-                    <div className="relative">
-                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                            <Search className="h-5 w-5" />
-                        </div>
-                        <Input
-                            placeholder="Buscar por título, descripción o etiquetas..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 h-12 text-base border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:focus:ring-green-400 dark:focus:border-green-400"
-                        />
+                        <Card className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-600 dark:to-orange-700 border-0 shadow-xl">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+                            <CardContent className="relative p-6 text-white">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <p className="text-orange-100 text-sm font-medium">Horas Totales</p>
+                                        <p className="text-3xl font-bold">{userStats.totalHours}h</p>
+                                        <p className="text-orange-200 text-xs">Contenido disponible</p>
+                                    </div>
+                                    <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
+                                        <Target className="w-6 h-6" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
 
-                    {/* Filtros */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Categoría</label>
-                            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                                <SelectTrigger className="border-gray-300 dark:border-gray-600">
-                                    <SelectValue placeholder="Todas las categorías" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todas las categorías</SelectItem>
-                                    <SelectItem value="video">Videos</SelectItem>
-                                    <SelectItem value="documento">Documentos</SelectItem>
-                                    <SelectItem value="audio">Audio</SelectItem>
-                                    <SelectItem value="curso">Cursos</SelectItem>
-                                    <SelectItem value="webinar">Webinars</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Dificultad</label>
-                            <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-                                <SelectTrigger className="border-gray-300 dark:border-gray-600">
-                                    <SelectValue placeholder="Todas las dificultades" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todas las dificultades</SelectItem>
-                                    <SelectItem value="principiante">Principiante</SelectItem>
-                                    <SelectItem value="intermedio">Intermedio</SelectItem>
-                                    <SelectItem value="avanzado">Avanzado</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                            <input
-                                type="checkbox"
-                                id="showCompleted"
-                                checked={showCompleted}
-                                onChange={(e) => setShowCompleted(e.target.checked)}
-                                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                            />
-                            <label htmlFor="showCompleted" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Solo completados
-                            </label>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                            <input
-                                type="checkbox"
-                                id="showBookmarked"
-                                checked={showBookmarked}
-                                onChange={(e) => setShowBookmarked(e.target.checked)}
-                                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                            />
-                            <label htmlFor="showBookmarked" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Solo favoritos
-                            </label>
-                        </div>
-                    </div>
-
-                    {/* Resumen de resultados */}
-                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                <BookOpen className="w-4 h-4" />
-                                <span className="font-medium">
-                                    Mostrando {filteredContent.length} de {dummyLearningContent.length} recursos
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Grid de contenido */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredContent.map((item) => {
-                    const CategoryIcon = getCategoryIcon(item.category);
-                    return (
-                        <Card 
-                            key={item.id} 
-                            className="bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden group"
-                        >
-                            {/* Header de la card */}
+                    {/* Panel de Búsqueda y Filtros Mejorado */}
+                    <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-white/20 dark:border-slate-700/50 shadow-xl">
+                        <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 border-b border-slate-200 dark:border-slate-600">
+                            <CardTitle className="flex items-center gap-3 text-slate-900 dark:text-white">
+                                <div className="p-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500">
+                                    <Search className="h-5 w-5 text-white" />
+                                </div>
+                                <span>Explorar Contenido de Aprendizaje</span>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6 p-6">
+                            {/* Búsqueda principal mejorada */}
                             <div className="relative">
-                                <div className="h-32 bg-gradient-to-br from-green-100 to-blue-100 dark:from-green-900/30 dark:to-blue-900/30 flex items-center justify-center">
-                                    <CategoryIcon className="w-12 h-12 text-green-600 dark:text-green-400" />
+                                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400">
+                                    <Search className="h-5 w-5" />
                                 </div>
-                                
-                                {/* Badges superpuestos */}
-                                <div className="absolute top-2 left-2 flex gap-1">
-                                    <Badge className={getDifficultyColor(item.difficulty)}>
-                                        {item.difficulty}
-                                    </Badge>
-                                    {item.isPremium && (
-                                        <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                                            <Star className="w-3 h-3 mr-1" />
-                                            Premium
-                                        </Badge>
-                                    )}
-                                </div>
-
-                                {/* Botones de acción */}
-                                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-0 bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800"
-                                    >
-                                        <Bookmark className="w-4 h-4" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-0 bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800"
-                                    >
-                                        <Share2 className="w-4 h-4" />
-                                    </Button>
-                                </div>
-
-                                {/* Indicador de completado */}
-                                {item.isCompleted && (
-                                    <div className="absolute bottom-2 right-2">
-                                        <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-                                            <CheckCircle className="w-5 h-5 text-white" />
-                                        </div>
-                                    </div>
-                                )}
+                                <Input
+                                    placeholder="Buscar por título, descripción, instructor o etiquetas..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-12 h-14 text-base border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm"
+                                />
                             </div>
 
-                            {/* Contenido de la card */}
-                            <CardContent className="p-4">
-                                <div className="space-y-3">
-                                    <div>
-                                        <h3 className="font-semibold text-gray-900 dark:text-white text-lg line-clamp-2 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
-                                            {item.title}
-                                        </h3>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mt-1">
-                                            {item.description}
-                                        </p>
+                            {/* Filtros organizados */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Categoría</label>
+                                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                                        <SelectTrigger className="border-slate-300 dark:border-slate-600 bg-white/50 dark:bg-slate-700/50">
+                                            <SelectValue placeholder="Todas las categorías" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todas las categorías</SelectItem>
+                                            <SelectItem value="video">Videos</SelectItem>
+                                            <SelectItem value="documento">Documentos</SelectItem>
+                                            <SelectItem value="audio">Audio</SelectItem>
+                                            <SelectItem value="curso">Cursos</SelectItem>
+                                            <SelectItem value="webinar">Webinars</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Dificultad</label>
+                                    <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
+                                        <SelectTrigger className="border-slate-300 dark:border-slate-600 bg-white/50 dark:bg-slate-700/50">
+                                            <SelectValue placeholder="Todas las dificultades" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todas las dificultades</SelectItem>
+                                            <SelectItem value="principiante">Principiante</SelectItem>
+                                            <SelectItem value="intermedio">Intermedio</SelectItem>
+                                            <SelectItem value="avanzado">Avanzado</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="flex items-center space-x-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-600">
+                                    <input
+                                        type="checkbox"
+                                        id="showCompleted"
+                                        checked={showCompleted}
+                                        onChange={(e) => setShowCompleted(e.target.checked)}
+                                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <label htmlFor="showCompleted" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                        Solo completados
+                                    </label>
+                                </div>
+
+                                <div className="flex items-center space-x-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-600">
+                                    <input
+                                        type="checkbox"
+                                        id="showBookmarked"
+                                        checked={showBookmarked}
+                                        onChange={(e) => setShowBookmarked(e.target.checked)}
+                                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <label htmlFor="showBookmarked" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                        Solo favoritos
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Resumen de resultados mejorado */}
+                            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+                                        <BookOpen className="w-4 h-4" />
+                                        <span className="font-semibold">
+                                            Mostrando {filteredContent.length} de {dummyLearningContent.length} recursos
+                                        </span>
                                     </div>
+                                </div>
+                                <Badge variant="outline" className="border-blue-300 text-blue-700 dark:border-blue-600 dark:text-blue-300">
+                                    <Zap className="w-3 h-3 mr-1" />
+                                    Contenido Premium Disponible
+                                </Badge>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                                    {/* Metadatos */}
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                                            <div className="flex items-center gap-1">
-                                                <Clock className="w-3 h-3" />
-                                                {formatDuration(item.duration)}
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <Users className="w-3 h-3" />
-                                                {item.students.toLocaleString()}
-                                            </div>
+                    {/* Grid de contenido mejorado */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {filteredContent.map((item) => {
+                            const CategoryIcon = getCategoryIcon(item.category);
+                            return (
+                                <Card 
+                                    key={item.id} 
+                                    className="group relative overflow-hidden bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-white/20 dark:border-slate-700/50 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105"
+                                >
+                                    {/* Header de la card con gradiente */}
+                                    <div className="relative h-40 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 dark:from-blue-600 dark:via-indigo-600 dark:to-purple-700 flex items-center justify-center overflow-hidden">
+                                        {/* Elementos decorativos */}
+                                        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="20" cy="20" r="1"/%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+                                        
+                                        <div className="relative z-10 p-6 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30">
+                                            <CategoryIcon className="w-12 h-12 text-white" />
                                         </div>
-
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-1">
-                                                <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                                                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                                    {item.rating}
-                                                </span>
-                                            </div>
-                                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                {item.instructor}
-                                            </span>
-                                        </div>
-
-                                        {/* Etiquetas */}
-                                        <div className="flex flex-wrap gap-1">
-                                            {item.tags.slice(0, 2).map((tag, index) => (
-                                                <Badge 
-                                                    key={index} 
-                                                    variant="outline" 
-                                                    className="text-xs px-2 py-1 border-gray-200 dark:border-gray-600"
-                                                >
-                                                    {tag}
-                                                </Badge>
-                                            ))}
-                                            {item.tags.length > 2 && (
-                                                <Badge 
-                                                    variant="outline" 
-                                                    className="text-xs px-2 py-1 border-gray-200 dark:border-gray-600"
-                                                >
-                                                    +{item.tags.length - 2}
+                                        
+                                        {/* Badges superpuestos */}
+                                        <div className="absolute top-3 left-3 flex gap-2">
+                                            <Badge className={`${getDifficultyColor(item.difficulty)} backdrop-blur-sm border-0`}>
+                                                {item.difficulty}
+                                            </Badge>
+                                            {item.isPremium && (
+                                                <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 backdrop-blur-sm">
+                                                    <Crown className="w-3 h-3 mr-1" />
+                                                    Premium
                                                 </Badge>
                                             )}
                                         </div>
+
+                                        {/* Botones de acción */}
+                                        <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 w-8 p-0 bg-white/20 backdrop-blur-sm hover:bg-white/30 border border-white/30"
+                                            >
+                                                <Bookmark className="w-4 h-4 text-white" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 w-8 p-0 bg-white/20 backdrop-blur-sm hover:bg-white/30 border border-white/30"
+                                            >
+                                                <Share2 className="w-4 h-4 text-white" />
+                                            </Button>
+                                        </div>
+
+                                        {/* Indicador de completado */}
+                                        {item.isCompleted && (
+                                            <div className="absolute bottom-3 right-3">
+                                                <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center shadow-lg">
+                                                    <CheckCircle className="w-6 h-6 text-white" />
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {/* Botón de acción */}
+                                    {/* Contenido de la card */}
+                                    <CardContent className="p-6 space-y-4">
+                                        <div className="space-y-2">
+                                            <h3 className="font-bold text-slate-900 dark:text-white text-lg line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                                {item.title}
+                                            </h3>
+                                            <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
+                                                {item.description}
+                                            </p>
+                                        </div>
+
+                                        {/* Metadatos mejorados */}
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                                                <div className="flex items-center gap-1">
+                                                    <Clock className="w-3 h-3" />
+                                                    {formatDuration(item.duration)}
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <Users className="w-3 h-3" />
+                                                    {item.students.toLocaleString()}
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-1">
+                                                    <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                                                    <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                                                        {item.rating}
+                                                    </span>
+                                                </div>
+                                                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                                    {item.instructor}
+                                                </span>
+                                            </div>
+
+                                            {/* Etiquetas mejoradas */}
+                                            <div className="flex flex-wrap gap-1">
+                                                {item.tags.slice(0, 2).map((tag, index) => (
+                                                    <Badge 
+                                                        key={index} 
+                                                        variant="outline" 
+                                                        className="text-xs px-2 py-1 border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50"
+                                                    >
+                                                        {tag}
+                                                    </Badge>
+                                                ))}
+                                                {item.tags.length > 2 && (
+                                                    <Badge 
+                                                        variant="outline" 
+                                                        className="text-xs px-2 py-1 border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50"
+                                                    >
+                                                        +{item.tags.length - 2}
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Botón de acción mejorado */}
+                                        <Button 
+                                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                        >
+                                            {item.isCompleted ? (
+                                                <>
+                                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                                    Completado
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Play className="w-4 h-4 mr-2" />
+                                                    {item.isPremium ? 'Acceder Premium' : 'Comenzar'}
+                                                </>
+                                            )}
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
+                    </div>
+
+                    {/* Estado vacío mejorado */}
+                    {filteredContent.length === 0 && (
+                        <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-white/20 dark:border-slate-700/50">
+                            <CardContent className="text-center py-16">
+                                <div className="flex flex-col items-center gap-4 text-slate-500 dark:text-slate-400">
+                                    <div className="p-6 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 rounded-full">
+                                        <BookOpen className="w-16 h-16 text-slate-400 dark:text-slate-500" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300">
+                                            {searchTerm || categoryFilter !== 'all' || difficultyFilter !== 'all'
+                                                ? 'No se encontró contenido con los filtros aplicados'
+                                                : 'No hay contenido disponible'
+                                            }
+                                        </h3>
+                                        <p className="text-sm">
+                                            Intenta ajustar los filtros o buscar con otros términos
+                                        </p>
+                                    </div>
                                     <Button 
-                                        className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white transition-all duration-200"
+                                        variant="outline" 
+                                        className="mt-4 border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-700"
+                                        onClick={() => {
+                                            setSearchTerm('');
+                                            setCategoryFilter('all');
+                                            setDifficultyFilter('all');
+                                            setShowCompleted(false);
+                                            setShowBookmarked(false);
+                                        }}
                                     >
-                                        {item.isCompleted ? (
-                                            <>
-                                                <CheckCircle className="w-4 h-4 mr-2" />
-                                                Completado
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Play className="w-4 h-4 mr-2" />
-                                                {item.isPremium ? 'Acceder Premium' : 'Comenzar'}
-                                            </>
-                                        )}
+                                        <RefreshCw className="w-4 h-4 mr-2" />
+                                        Limpiar Filtros
                                     </Button>
                                 </div>
                             </CardContent>
                         </Card>
-                    );
-                })}
-            </div>
-
-            {/* Estado vacío */}
-            {filteredContent.length === 0 && (
-                <div className="text-center py-12">
-                    <div className="flex flex-col items-center gap-3 text-gray-500 dark:text-gray-400">
-                        <BookOpen className="w-16 h-16 text-gray-300 dark:text-gray-600" />
-                        <div className="text-lg font-medium">
-                            {searchTerm || categoryFilter !== 'all' || difficultyFilter !== 'all'
-                                ? 'No se encontró contenido con los filtros aplicados'
-                                : 'No hay contenido disponible'
-                            }
-                        </div>
-                        <p className="text-sm">
-                            Intenta ajustar los filtros o buscar con otros términos
-                        </p>
-                    </div>
+                    )}
                 </div>
-            )}
+            </div>
         </div>
     );
 };
