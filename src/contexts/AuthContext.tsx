@@ -58,21 +58,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Usar autenticación real de Supabase
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        // Cargar perfil del usuario
-        loadUserProfile(session.user.id);
+    // Auto-login con usuario de prueba para desarrollo
+    console.log('AuthContext: Intentando auto-login con usuario de prueba...');
+    supabase.auth.signInWithPassword({
+      email: 'test@agentbooster.com',
+      password: 'testpassword123'
+    }).then(({ data: loginData, error: loginError }) => {
+      if (loginError) {
+        console.warn('AuthContext: Error en auto-login:', loginError.message);
+        // Continuar con el flujo normal de autenticación
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            loadUserProfile(session.user.id);
+          }
+          setLoading(false);
+          clearTimeout(timeoutId);
+        }).catch((error) => {
+          console.error('Error getting session:', error);
+          setLoading(false);
+          clearTimeout(timeoutId);
+        });
+      } else {
+        console.log('AuthContext: Auto-login exitoso');
+        setUser(loginData.user);
+        if (loginData.user) {
+          loadUserProfile(loginData.user.id);
+        }
+        setLoading(false);
+        clearTimeout(timeoutId);
       }
-      setLoading(false);
-      clearTimeout(timeoutId);
     }).catch((error) => {
-      console.error('Error getting session:', error);
+      console.error('AuthContext: Error en auto-login:', error);
       setLoading(false);
       clearTimeout(timeoutId);
     });
 
+    // Configurar listener de cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       console.log('Auth state changed:', session);
       setUser(session?.user ?? null);
