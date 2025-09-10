@@ -171,14 +171,38 @@ export const Cobranza: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
+      setError(null);
+      
+      // Timeout de seguridad para evitar carga infinita
+      const timeoutId = setTimeout(() => {
+        if (isLoading) {
+          console.error('Cobranza: Timeout en carga de datos');
+          setError('La carga de datos está tomando demasiado tiempo. Por favor, recarga la página.');
+          setIsLoading(false);
+        }
+      }, 10000); // 10 segundos de timeout
+      
       try {
+        console.log('Cobranza: Iniciando carga de datos...');
         const policiesData = await getPolicies();
+        console.log('Cobranza: Datos de pólizas cargados:', policiesData.length);
+        
+        // updatePolicyStatuses no es async
         const updatedPolicies = updatePolicyStatuses(policiesData);
+        console.log('Cobranza: Pólizas actualizadas:', updatedPolicies.length);
+        
         setPolicies(updatedPolicies);
+        console.log('Cobranza: Estado actualizado correctamente');
+        
+        // Limpiar timeout si la carga fue exitosa
+        clearTimeout(timeoutId);
       } catch (err: any) {
-        setError(err.message);
+        console.error('Cobranza: Error cargando datos:', err);
+        setError(err.message || 'Error desconocido al cargar los datos');
+        clearTimeout(timeoutId);
       } finally {
         setIsLoading(false);
+        console.log('Cobranza: Carga de datos completada');
       }
     };
 
@@ -440,8 +464,23 @@ export const Cobranza: React.FC = () => {
       <div className="p-6">
         <Alert className="border-red-200 bg-red-50">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Error al cargar datos</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertTitle>Error al cargar datos de cobranza</AlertTitle>
+          <AlertDescription className="mb-4">
+            {error}
+            <br />
+            <small className="text-gray-600">
+              Verifica tu conexión a internet y las credenciales de Supabase.
+            </small>
+          </AlertDescription>
+          <Button 
+            onClick={() => window.location.reload()} 
+            variant="outline" 
+            size="sm"
+            className="mt-2"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Recargar página
+          </Button>
         </Alert>
       </div>
     );
