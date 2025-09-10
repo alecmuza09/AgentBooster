@@ -162,9 +162,9 @@ export const Layout: React.FC = () => {
     <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-hidden">
       {/* Sidebar */}
       <aside className={clsx(
-        "fixed top-0 left-0 h-full w-64 flex flex-col transition-all duration-300 ease-in-out z-50",
-        "bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-r border-slate-200 dark:border-slate-700",
-        "shadow-xl",
+        "fixed top-0 left-0 h-full w-64 flex flex-col transition-all duration-300 ease-in-out z-[100]",
+        "bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-r border-slate-200 dark:border-slate-700",
+        "shadow-2xl",
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         
@@ -308,7 +308,7 @@ export const Layout: React.FC = () => {
       {/* Overlay para móvil */}
       {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-[90] lg:hidden"
           onClick={toggleMobileMenu}
         />
       )}
@@ -387,42 +387,6 @@ export const Layout: React.FC = () => {
                   <ChevronDown className="w-4 h-4 text-slate-400" />
                 </Button>
 
-                {/* Dropdown del usuario */}
-                {isUserMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-2 z-50">
-                    <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-                      <p className="text-sm font-medium text-slate-900 dark:text-white">
-                        {user?.user_metadata?.full_name || 'Usuario'}
-                      </p>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">
-                        {user?.email}
-                      </p>
-                    </div>
-                    
-                    <div className="py-2">
-                      <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">
-                        <User className="w-4 h-4" />
-                        Perfil
-                      </button>
-                      <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">
-                        <Settings className="w-4 h-4" />
-                        Configuración
-                      </button>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="py-2">
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        Cerrar Sesión
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -437,9 +401,61 @@ export const Layout: React.FC = () => {
       {/* Overlay para el menú de usuario */}
       {isUserMenuOpen && (
         <div 
-          className="fixed inset-0 z-40"
+          className="fixed inset-0 z-[9998]"
           onClick={toggleUserMenu}
         />
+      )}
+
+      {/* Menú de usuario - Posicionamiento fijo para aparecer por delante de todo */}
+      {isUserMenuOpen && (
+        <div className="fixed top-20 right-6 w-64 bg-white dark:bg-slate-800 rounded-lg shadow-2xl border border-slate-200 dark:border-slate-700 py-2 z-[9999]">
+          <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+            <p className="text-sm font-medium text-slate-900 dark:text-white">
+              {user?.user_metadata?.full_name || 'Usuario'}
+            </p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              {user?.email}
+            </p>
+          </div>
+          
+          <div className="py-2">
+            <button 
+              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
+              onClick={() => {
+                navigate('/settings');
+                setIsUserMenuOpen(false);
+              }}
+            >
+              <User className="w-4 h-4" />
+              Perfil
+            </button>
+            <button 
+              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
+              onClick={() => {
+                navigate('/settings');
+                setIsUserMenuOpen(false);
+              }}
+            >
+              <Settings className="w-4 h-4" />
+              Configuración
+            </button>
+          </div>
+          
+          <Separator />
+          
+          <div className="py-2">
+            <button
+              onClick={() => {
+                handleLogout();
+                setIsUserMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

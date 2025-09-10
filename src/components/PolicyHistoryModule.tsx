@@ -6,7 +6,7 @@ import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { NoteAttachmentUploader } from './NoteAttachmentUploader';
+// import { NoteAttachmentUploader } from './NoteAttachmentUploader';
 import { 
   History, 
   Calendar, 
@@ -41,6 +41,8 @@ import {
   NoteAttachment,
   RENEWAL_ALERT_CONFIG
 } from '../types/renewal';
+// import { PolicyLogsViewer } from './PolicyLogsViewer';
+// import { logNoteAdded, logPolicyUpdated } from '../utils/policyLogger';
 import { Policy } from '../types/policy';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -414,7 +416,7 @@ export const PolicyHistoryModule: React.FC<PolicyHistoryModuleProps> = ({
   policy, 
   onUpdatePolicy 
 }) => {
-  const [activeTab, setActiveTab] = useState<'vigencias' | 'renovaciones' | 'notas'>('vigencias');
+  const [activeTab, setActiveTab] = useState<'vigencias' | 'renovaciones' | 'notas' | 'logs'>('vigencias');
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [newNote, setNewNote] = useState({
     titulo: '',
@@ -556,6 +558,9 @@ export const PolicyHistoryModule: React.FC<PolicyHistoryModuleProps> = ({
       notas: [nota, ...prev.notas]
     }));
 
+    // Registrar en logs
+    // logNoteAdded(policy, newNote.titulo, 'Usuario Actual');
+
     // Limpiar formulario
     setNewNote({
       titulo: '',
@@ -600,7 +605,8 @@ export const PolicyHistoryModule: React.FC<PolicyHistoryModuleProps> = ({
         {[
           { id: 'vigencias', label: `Vigencias (${historial.totalVigencias})`, icon: Shield },
           { id: 'renovaciones', label: `Renovaciones (${historial.totalRenovaciones})`, icon: RefreshCw },
-          { id: 'notas', label: `Notas (${historial.notas.length})`, icon: MessageSquare }
+          { id: 'notas', label: `Notas (${historial.notas.length})`, icon: MessageSquare },
+          { id: 'logs', label: 'Registro de Actividad', icon: History }
         ].map(tab => {
           const Icon = tab.icon;
           return (
@@ -724,11 +730,11 @@ export const PolicyHistoryModule: React.FC<PolicyHistoryModuleProps> = ({
                     </div>
                     
                     {/* Componente de archivos adjuntos */}
-                    <NoteAttachmentUploader
-                      attachments={noteAttachments}
-                      onAttachmentsChange={setNoteAttachments}
-                      className="border-t pt-4"
-                    />
+                    <div className="border-t pt-4">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Adjuntar documentos (próximamente)
+                      </p>
+                    </div>
                     
                     <div className="flex items-center space-x-2">
                       <input
@@ -779,6 +785,17 @@ export const PolicyHistoryModule: React.FC<PolicyHistoryModuleProps> = ({
                   </CardContent>
                 </Card>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'logs' && (
+          <div>
+            <div className="text-center py-8">
+              <History className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600 dark:text-gray-400">
+                Registro de actividad (próximamente)
+              </p>
             </div>
           </div>
         )}

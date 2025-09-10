@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,8 +9,6 @@ import { PaymentAlertSystem } from '@/components/PaymentAlertSystem';
 import { RenewalAlertSystem } from '@/components/RenewalAlertSystem';
 import {
   TrendingUp, 
-  TrendingDown, 
-  Users, 
   FileText, 
   DollarSign, 
   Target,
@@ -18,38 +17,19 @@ import {
   AlertTriangle,
   CheckCircle,
   ArrowUpRight,
-  ArrowDownRight,
-  Activity,
-  BarChart3,
   PieChart,
-  LineChart,
-  Plus,
-  Eye,
   Download,
   RefreshCw,
-  Star,
-  Award,
   Zap,
-  Shield,
-  Heart,
   Building2,
-  Car,
-  Home,
-  Briefcase,
-  UserCheck,
-  UserX,
-  CalendarDays,
-  Clock3,
-  AlertCircle,
-  Bell,
-  Settings,
-  MoreHorizontal
+  Bell
 } from 'lucide-react';
 import { Policy } from '@/types/policy';
 import { getPolicies } from '@/data/policies';
+import { getLeads } from '@/data/leads';
+import { getClients } from '@/data/clients';
 import { updatePolicyStatuses } from '@/utils/paymentUtils';
-import { format, differenceInDays, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { differenceInDays, parseISO, addDays } from 'date-fns';
 
 interface DashboardStats {
   totalPolicies: number;
@@ -74,79 +54,108 @@ interface QuickAction {
 }
 
 export const Dashboard: React.FC = () => {
+    const navigate = useNavigate();
     const [policies, setPolicies] = useState<Policy[]>([]);
+    const [leads, setLeads] = useState<any[]>([]);
+    const [clients, setClients] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'quarter'>('month');
+    const [error, setError] = useState<string | null>(null);
+
 
   // Cargar datos
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-        const policiesData = await getPolicies();
-        const updatedPolicies = updatePolicyStatuses(policiesData);
-        setPolicies(updatedPolicies);
-      } catch (err: any) {
-        setError(err.message);
+                // Cargar datos desde Supabase en paralelo
+                const [policiesData, leadsData, clientsData] = await Promise.all([
+                    getPolicies(),
+                    getLeads(),
+                    getClients()
+                ]);
+                
+                setPolicies(policiesData);
+                setLeads(leadsData);
+                setClients(clientsData);
+                
+                // Actualizar estados de pólizas
+                const updatedPolicies = updatePolicyStatuses(policiesData);
+                setPolicies(updatedPolicies);
+            } catch (err: any) {
+                setError(err.message);
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchData();
-  }, []);
+    }, []);
 
-  // Calcular estadísticas
+  // Calcular estadísticas enfocadas en cobranza y renovaciones
   const stats: DashboardStats = {
     totalPolicies: policies.length,
     activePolicies: policies.filter(p => p.status === 'active').length,
-    totalLeads: 45, // Mock data
-    conversionRate: 68.5,
-    monthlyRevenue: 125000,
-    pendingRenewals: policies.filter(p => p.status === 'pending_renewal').length,
-    overduePayments: policies.filter(p => p.status === 'overdue_critical').length,
+    totalLeads: leads.length,
+    conversionRate: leads.length > 0 ? (clients.length / leads.length) * 100 : 0,
+    monthlyRevenue: policies.reduce((sum, p) => sum + (p.total || 0), 0),
+    pendingRenewals: policies.filter(p => {
+      if (!p.fechaVigenciaFinal) return false;
+      const today = new Date();
+      const expirationDate = parseISO(p.fechaVigenciaFinal);
+      const daysUntilExpiration = differenceInDays(expirationDate, today);
+      return daysUntilExpiration <= 30 && daysUntilExpiration >= 0;
+    }).length,
+    overduePayments: policies.filter(p => {
+      if (!p.fechaPagoActual) return false;
+      const today = new Date();
+      const lastPayment = parseISO(p.fechaPagoActual);
+      const frequencyDays = p.formaDePago === 'Mensual' ? 30 : 
+                           p.formaDePago === 'Trimestral' ? 90 :
+                           p.formaDePago === 'Semestral' ? 180 : 365;
+      const nextPaymentDate = addDays(lastPayment, frequencyDays);
+      return differenceInDays(today, nextPaymentDate) > 0;
+    }).length,
     thisMonthGrowth: 12.5,
     lastMonthGrowth: -2.3
   };
 
-  // Acciones rápidas
+  // Acciones rápidas enfocadas en cobranza y renovaciones
   const quickActions: QuickAction[] = [
     {
-      id: 'new-policy',
+      id: 'cobranza',
+      title: 'Centro de Cobranza',
+      description: 'Gestionar pagos pendientes y vencidos',
+      icon: <DollarSign className="w-6 h-6" />,
+      href: '/cobranza',
+      color: 'text-red-600',
+      gradient: 'from-red-500 to-red-600'
+    },
+    {
+      id: 'renovaciones',
+      title: 'Renovaciones',
+      description: 'Procesar renovaciones próximas',
+      icon: <RefreshCw className="w-6 h-6" />,
+      href: '/cobranza?tab=renovaciones',
+      color: 'text-purple-600',
+      gradient: 'from-purple-500 to-purple-600'
+    },
+    {
+      id: 'alertas',
+      title: 'Alertas Críticas',
+      description: 'Ver alertas de pago y renovación',
+      icon: <AlertTriangle className="w-6 h-6" />,
+      href: '/cobranza?tab=alertas',
+      color: 'text-orange-600',
+      gradient: 'from-orange-500 to-orange-600'
+    },
+    {
+      id: 'nueva-póliza',
       title: 'Nueva Póliza',
       description: 'Crear una nueva póliza de seguro',
       icon: <FileText className="w-6 h-6" />,
       href: '/policies',
       color: 'text-blue-600',
       gradient: 'from-blue-500 to-blue-600'
-    },
-    {
-      id: 'new-lead',
-      title: 'Nuevo Lead',
-      description: 'Agregar un nuevo prospecto',
-      icon: <Users className="w-6 h-6" />,
-      href: '/leads',
-      color: 'text-green-600',
-      gradient: 'from-green-500 to-green-600'
-    },
-    {
-      id: 'cobranza',
-      title: 'Cobranza',
-      description: 'Gestionar pagos pendientes',
-      icon: <DollarSign className="w-6 h-6" />,
-      href: '/cobranza',
-      color: 'text-orange-600',
-      gradient: 'from-orange-500 to-orange-600'
-    },
-    {
-      id: 'reports',
-      title: 'Reportes',
-      description: 'Ver análisis y métricas',
-      icon: <BarChart3 className="w-6 h-6" />,
-      href: '/reports',
-      color: 'text-purple-600',
-      gradient: 'from-purple-500 to-purple-600'
     }
   ];
 
@@ -208,11 +217,54 @@ export const Dashboard: React.FC = () => {
                                 </p>
                             </div>
               <div className="flex items-center gap-3">
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    setIsLoading(true);
+                    const fetchData = async () => {
+                      try {
+                        const policiesData = await getPolicies();
+                        const updatedPolicies = updatePolicyStatuses(policiesData);
+                        setPolicies(updatedPolicies);
+                      } catch (err: any) {
+                        setError(err.message);
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    };
+                    fetchData();
+                  }}
+                >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Actualizar
                 </Button>
-                <Button size="sm">
+                <Button 
+                  size="sm"
+                  onClick={() => {
+                    // Función para exportar datos del dashboard
+                    const exportData = {
+                      fecha: new Date().toISOString(),
+                      estadisticas: stats,
+                      politicas: policies.length,
+                      resumen: {
+                        totalPoliticas: stats.totalPolicies,
+                        politicasActivas: stats.activePolicies,
+                        pagosVencidos: stats.overduePayments,
+                        renovacionesProximas: stats.pendingRenewals
+                      }
+                    };
+                    
+                    const dataStr = JSON.stringify(exportData, null, 2);
+                    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                    const url = URL.createObjectURL(dataBlob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `dashboard-export-${new Date().toISOString().split('T')[0]}.json`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
                   <Download className="w-4 h-4 mr-2" />
                   Exportar
                 </Button>
@@ -249,56 +301,34 @@ export const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-green-500 to-green-600 text-white">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
-              <CardContent className="p-6 relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-2 bg-white/20 rounded-lg">
-                    <Users className="w-6 h-6" />
-                    </div>
-                  <Badge variant="secondary" className="bg-white/20 text-white border-0">
-                    {stats.conversionRate}%
-                  </Badge>
-                                </div>
-                <div className="space-y-1">
-                  <p className="text-2xl font-bold">{stats.totalLeads}</p>
-                  <p className="text-green-100 text-sm">Leads Activos</p>
-                                                    </div>
-                <div className="mt-4 flex items-center text-sm">
-                  <UserCheck className="w-4 h-4 mr-1" />
-                  <span>Tasa de conversión {stats.conversionRate}%</span>
-                                                    </div>
-              </CardContent>
-            </Card>
-
             <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
               <CardContent className="p-6 relative z-10">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-2 bg-white/20 rounded-lg">
-                    <DollarSign className="w-6 h-6" />
-                                                </div>
+                    <RefreshCw className="w-6 h-6" />
+                  </div>
                   <Badge variant="secondary" className="bg-white/20 text-white border-0">
-                    +{stats.lastMonthGrowth}%
+                    {stats.pendingRenewals}
                   </Badge>
-                                    </div>
+                </div>
                 <div className="space-y-1">
-                  <p className="text-2xl font-bold">${(stats.monthlyRevenue / 1000).toFixed(0)}K</p>
-                  <p className="text-purple-100 text-sm">Ingresos Mensuales</p>
-                                </div>
+                  <p className="text-2xl font-bold">{stats.pendingRenewals}</p>
+                  <p className="text-purple-100 text-sm">Renovaciones Próximas</p>
+                </div>
                 <div className="mt-4 flex items-center text-sm">
-                  <TrendingUp className="w-4 h-4 mr-1" />
-                  <span>+{stats.lastMonthGrowth}% vs mes anterior</span>
-                            </div>
+                  <Calendar className="w-4 h-4 mr-1" />
+                  <span>Próximas a vencer en 30 días</span>
+                </div>
               </CardContent>
             </Card>
 
-            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-green-500 to-green-600 text-white">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
               <CardContent className="p-6 relative z-10">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-2 bg-white/20 rounded-lg">
-                    <Target className="w-6 h-6" />
+                    <CheckCircle className="w-6 h-6" />
                   </div>
                   <Badge variant="secondary" className="bg-white/20 text-white border-0">
                     {stats.activePolicies}
@@ -306,12 +336,34 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <div className="space-y-1">
                   <p className="text-2xl font-bold">{stats.activePolicies}</p>
-                  <p className="text-orange-100 text-sm">Pólizas Activas</p>
-                                </div>
+                  <p className="text-green-100 text-sm">Pólizas Activas</p>
+                </div>
                 <div className="mt-4 flex items-center text-sm">
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  <span>{((stats.activePolicies / stats.totalPolicies) * 100).toFixed(1)}% activas</span>
-                                                    </div>
+                  <Target className="w-4 h-4 mr-1" />
+                  <span>{((stats.activePolicies / stats.totalPolicies) * 100).toFixed(1)}% del total</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-red-500 to-red-600 text-white">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+              <CardContent className="p-6 relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-2 bg-white/20 rounded-lg">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                  <Badge variant="secondary" className="bg-white/20 text-white border-0">
+                    {stats.overduePayments}
+                  </Badge>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-2xl font-bold">{stats.overduePayments}</p>
+                  <p className="text-red-100 text-sm">Pagos Vencidos</p>
+                </div>
+                <div className="mt-4 flex items-center text-sm">
+                  <Clock className="w-4 h-4 mr-1" />
+                  <span>Requieren atención inmediata</span>
+                </div>
               </CardContent>
             </Card>
                                                     </div>
@@ -331,7 +383,7 @@ export const Dashboard: React.FC = () => {
                     key={action.id}
                     variant="outline"
                     className="h-auto p-4 flex flex-col items-start gap-3 hover:shadow-md transition-all duration-200 border-2 hover:border-blue-200 dark:hover:border-blue-800"
-                    onClick={() => window.location.href = action.href}
+                    onClick={() => navigate(action.href)}
                   >
                     <div className={`p-2 rounded-lg bg-gradient-to-br ${action.gradient} text-white`}>
                       {action.icon}
@@ -346,6 +398,45 @@ export const Dashboard: React.FC = () => {
                                 </div>
             </CardContent>
           </Card>
+
+          {/* Alertas Críticas - Sección destacada */}
+          {stats.overduePayments > 0 && (
+            <Card className="border-0 shadow-lg bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-red-200 dark:border-red-800">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-800 dark:text-red-200">
+                  <AlertTriangle className="w-6 h-6 text-red-600 animate-pulse" />
+                  ⚠️ ALERTAS CRÍTICAS - Atención Inmediata Requerida
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                    <p className="text-2xl font-bold text-red-700 dark:text-red-300">{stats.overduePayments}</p>
+                    <p className="text-sm text-red-600 dark:text-red-400">Pagos Vencidos</p>
+                  </div>
+                  <div className="text-center p-4 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                    <p className="text-2xl font-bold text-orange-700 dark:text-orange-300">{stats.pendingRenewals}</p>
+                    <p className="text-sm text-orange-600 dark:text-orange-400">Renovaciones Próximas</p>
+                  </div>
+                  <div className="text-center p-4 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+                    <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">
+                      {stats.overduePayments + stats.pendingRenewals}
+                    </p>
+                    <p className="text-sm text-yellow-600 dark:text-yellow-400">Total Crítico</p>
+                  </div>
+                </div>
+                <div className="mt-4 text-center">
+                  <Button 
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                    onClick={() => navigate('/cobranza')}
+                  >
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    Ir al Centro de Cobranza
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
@@ -369,7 +460,8 @@ export const Dashboard: React.FC = () => {
                       ));
                     }}
                     onViewPolicy={(policyId) => {
-                      window.location.href = `/policies?policy=${policyId}`;
+                      // Redirigir al módulo de cobranza para gestionar el pago
+                      navigate(`/cobranza?action=payment&policy=${policyId}`);
                     }}
                   />
                   
@@ -378,14 +470,12 @@ export const Dashboard: React.FC = () => {
                   <RenewalAlertSystem
                     policies={policies}
                     onProcessRenewal={(policyId) => {
-                      setPolicies(prev => prev.map(policy =>
-                        policy.id === policyId
-                          ? { ...policy, status: 'pending_renewal' }
-                          : policy
-                      ));
+                      // Redirigir al módulo de cobranza para procesar renovación
+                      navigate(`/cobranza?action=renewal&policy=${policyId}`);
                     }}
                     onViewPolicy={(policyId) => {
-                      window.location.href = `/policies?policy=${policyId}`;
+                      // Redirigir al módulo de cobranza para ver detalles
+                      navigate(`/cobranza?policy=${policyId}`);
                     }}
                   />
                 </CardContent>
@@ -405,24 +495,36 @@ export const Dashboard: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {Object.entries(ramoDistribution).map(([ramo, count]) => (
-                      <div key={ramo} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-3 h-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500"></div>
-                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{ramo}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Progress 
-                            value={(count / stats.totalPolicies) * 100} 
-                            className="w-20 h-2"
-                          />
-                          <span className="text-sm text-slate-600 dark:text-slate-400 w-8 text-right">
-                            {count}
-                          </span>
-                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                    {Object.entries(ramoDistribution)
+                      .sort(([,a], [,b]) => b - a)
+                      .map(([ramo, count]) => {
+                        const percentage = (count / stats.totalPolicies) * 100;
+                        const ramoColors = {
+                          'Vida': 'from-purple-500 to-pink-500',
+                          'Gastos Médicos Mayores': 'from-blue-500 to-cyan-500',
+                          'Auto': 'from-green-500 to-emerald-500',
+                          'Hogar': 'from-orange-500 to-yellow-500',
+                          'Empresarial': 'from-red-500 to-rose-500'
+                        };
+                        return (
+                          <div key={ramo} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-4 h-4 rounded-full bg-gradient-to-r ${ramoColors[ramo as keyof typeof ramoColors] || 'from-gray-500 to-gray-600'}`}></div>
+                              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{ramo}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Progress 
+                                value={percentage} 
+                                className="w-20 h-2"
+                              />
+                              <span className="text-sm text-slate-600 dark:text-slate-400 w-12 text-right">
+                                {count} ({percentage.toFixed(1)}%)
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -436,32 +538,50 @@ export const Dashboard: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {topAseguradorasList.map(([aseguradora, count], index) => (
-                      <div key={aseguradora} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm font-bold">
-                            {index + 1}
-                          </div>
-                          <div>
-                            <p className="font-medium text-slate-900 dark:text-white text-sm">{aseguradora}</p>
-                            <p className="text-xs text-slate-600 dark:text-slate-400">{count} pólizas</p>
-                                </div>
+                    {topAseguradorasList.map(([aseguradora, count], index) => {
+                      const percentage = (count / stats.totalPolicies) * 100;
+                      const rankColors = [
+                        'from-yellow-500 to-yellow-600', // 1st
+                        'from-gray-400 to-gray-500',     // 2nd
+                        'from-orange-500 to-orange-600', // 3rd
+                        'from-blue-500 to-blue-600',     // 4th
+                        'from-purple-500 to-purple-600'  // 5th
+                      ];
+                      return (
+                        <div key={aseguradora} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${rankColors[index] || 'from-gray-500 to-gray-600'} flex items-center justify-center text-white text-sm font-bold`}>
+                              {index + 1}
                             </div>
-                        <Badge variant="outline" className="text-xs">
-                          {((count / stats.totalPolicies) * 100).toFixed(1)}%
-                        </Badge>
-                                            </div>
-                                        ))}
-                                    </div>
+                            <div>
+                              <p className="font-medium text-slate-900 dark:text-white text-sm">{aseguradora}</p>
+                              <p className="text-xs text-slate-600 dark:text-slate-400">{count} pólizas</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant="outline" className="text-xs mb-1">
+                              {percentage.toFixed(1)}%
+                            </Badge>
+                            <div className="w-16 h-1 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full bg-gradient-to-r ${rankColors[index] || 'from-gray-500 to-gray-600'}`}
+                                style={{ width: `${percentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </CardContent>
               </Card>
 
-              {/* Métricas de rendimiento */}
+              {/* Métricas de cobranza */}
               <Card className="border-0 shadow-lg bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
-                    <Activity className="w-5 h-5 text-green-600" />
-                    Rendimiento
+                    <DollarSign className="w-5 h-5 text-green-600" />
+                    Métricas de Cobranza
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -471,7 +591,7 @@ export const Dashboard: React.FC = () => {
                       <span className="text-sm font-medium text-slate-900 dark:text-white">
                         {stats.activePolicies}/{stats.totalPolicies}
                       </span>
-                                </div>
+                    </div>
                     <Progress 
                       value={(stats.activePolicies / stats.totalPolicies) * 100} 
                       className="h-2"
@@ -480,23 +600,34 @@ export const Dashboard: React.FC = () => {
                     <Separator />
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Tasa de Conversión</span>
-                      <span className="text-sm font-medium text-green-600">{stats.conversionRate}%</span>
-                            </div>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Pagos Vencidos</span>
+                      <span className="text-sm font-medium text-red-600">{stats.overduePayments}</span>
+                    </div>
                     <Progress 
-                      value={stats.conversionRate} 
-                      className="h-2 bg-green-100 dark:bg-green-900/20"
+                      value={(stats.overduePayments / stats.totalPolicies) * 100} 
+                      className="h-2 bg-red-100 dark:bg-red-900/20"
                     />
                     
                     <Separator />
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">Pagos Pendientes</span>
-                      <span className="text-sm font-medium text-orange-600">{stats.overduePayments}</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Renovaciones Próximas</span>
+                      <span className="text-sm font-medium text-purple-600">{stats.pendingRenewals}</span>
                     </div>
                     <Progress 
-                      value={(stats.overduePayments / stats.totalPolicies) * 100} 
-                      className="h-2 bg-orange-100 dark:bg-orange-900/20"
+                      value={(stats.pendingRenewals / stats.totalPolicies) * 100} 
+                      className="h-2 bg-purple-100 dark:bg-purple-900/20"
+                    />
+
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">Tasa de Cobranza</span>
+                      <span className="text-sm font-medium text-green-600">85.5%</span>
+                    </div>
+                    <Progress 
+                      value={85.5} 
+                      className="h-2 bg-green-100 dark:bg-green-900/20"
                     />
                   </div>
                 </CardContent>

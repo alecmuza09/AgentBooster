@@ -31,21 +31,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check active sessions and sets the user
+    // Verificar si las credenciales de Supabase están configuradas
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      console.warn('Supabase credentials not configured. Using mock user for development.');
+      // Simular usuario autenticado para desarrollo
+      const mockUser = {
+        id: 'mock-user-id',
+        email: 'usuario@ejemplo.com',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        aud: 'authenticated',
+        role: 'authenticated'
+      } as User;
+      
+      setUser(mockUser);
+      setLoading(false);
+      return;
+    }
+
+    // Usar autenticación real de Supabase
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        // Cargar perfil del usuario
+        loadUserProfile(session.user.id);
+      }
       setLoading(false);
     });
 
-    // Listen for changes on auth state (signed in, signed out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       console.log('Auth state changed:', session);
       setUser(session?.user ?? null);
+      if (session?.user) {
+        // Cargar perfil del usuario
+        await loadUserProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error loading user profile:', error);
+        return;
+      }
+
+      setProfile(data);
+    } catch (error) {
+      console.error('Error in loadUserProfile:', error);
+    }
+  };
 
   const signIn = async (email: string, password: string) => {
     try {

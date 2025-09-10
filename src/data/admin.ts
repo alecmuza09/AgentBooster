@@ -1,4 +1,5 @@
 import { AdminUser, UserActivity, SystemSettings, AuditLog, ROLE_CONFIGS } from '../types/admin';
+import { supabase } from '../supabaseClient';
 
 // Datos dummy de usuarios administradores
 export const dummyAdminUsers: AdminUser[] = [
@@ -303,4 +304,64 @@ export const getSystemStats = () => {
     systemUptime: '99.9%',
     lastBackup: '2024-01-25T02:00:00Z'
   };
+};
+
+// Funciones para conectar con Supabase (cuando esté disponible)
+export const getAdminUsers = async (): Promise<AdminUser[]> => {
+    try {
+        // Verificar si las credenciales están configuradas
+        if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+            console.warn('Supabase credentials not configured. Using dummy admin users.');
+            return dummyAdminUsers;
+        }
+
+        // Por ahora, usar datos dummy hasta que se implemente la tabla de admin_users
+        console.log('Admin users table not yet implemented in Supabase, using dummy data');
+        return dummyAdminUsers;
+    } catch (error) {
+        console.error('Error in getAdminUsers:', error);
+        return dummyAdminUsers;
+    }
+};
+
+export const getUserActivities = async (): Promise<UserActivity[]> => {
+    try {
+        if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+            return dummyUserActivities;
+        }
+
+        console.log('User activities table not yet implemented in Supabase, using dummy data');
+        return dummyUserActivities;
+    } catch (error) {
+        console.error('Error in getUserActivities:', error);
+        return dummyUserActivities;
+    }
+};
+
+export const getSystemSettings = async (): Promise<SystemSettings[]> => {
+    try {
+        if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+            return dummySystemSettings;
+        }
+
+        console.log('System settings table not yet implemented in Supabase, using dummy data');
+        return dummySystemSettings;
+    } catch (error) {
+        console.error('Error in getSystemSettings:', error);
+        return dummySystemSettings;
+    }
+};
+
+export const getAuditLogs = async (): Promise<AuditLog[]> => {
+    try {
+        if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+            return dummyAuditLogs;
+        }
+
+        console.log('Audit logs table not yet implemented in Supabase, using dummy data');
+        return dummyAuditLogs;
+    } catch (error) {
+        console.error('Error in getAuditLogs:', error);
+        return dummyAuditLogs;
+    }
 };

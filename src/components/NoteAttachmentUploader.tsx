@@ -1,550 +1,401 @@
-import React, { useState, useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import React, { useState, useRef } from 'react';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Card, CardContent } from './ui/card';
+import { Badge } from './ui/badge';
 import { 
+  Paperclip, 
   Upload, 
+  X, 
   FileText, 
   Image, 
-  FileVideo, 
-  FileAudio,
-  File,
-  X,
+  File, 
+  AlertTriangle,
+  Lock,
   Eye,
   Download,
-  Lock,
-  AlertTriangle,
-  Plus,
-  Stethoscope,
-  Pill,
-  RefreshCw,
-  DollarSign,
-  Scale,
-  FileCheck,
-  Heart,
-  Activity
+  Trash2,
+  Plus
 } from 'lucide-react';
-import { DocumentCategory, NoteAttachment } from '@/types/renewal';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+
+// Tipos para archivos adjuntos
+export interface NoteAttachment {
+  id?: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize: number;
+  mimeType: string;
+  uploadedAt?: string;
+  uploadedBy?: string;
+  originalName: string;
+  fileType: string;
+  category: string;
+  description?: string;
+  esSensible: boolean;
+  // Campos específicos para documentos médicos
+  medicoTratante?: string;
+  numeroReceta?: string;
+  fechaDocumento?: string;
+  // Campos para otros tipos de documentos
+  numeroPoliza?: string;
+  fechaEmision?: string;
+  monto?: number;
+  moneda?: string;
+}
 
 interface NoteAttachmentUploaderProps {
-  attachments: Omit<NoteAttachment, 'id' | 'noteId' | 'uploadedAt' | 'filePath'>[];
-  onAttachmentsChange: (attachments: Omit<NoteAttachment, 'id' | 'noteId' | 'uploadedAt' | 'filePath'>[]) => void;
-  maxFiles?: number;
-  maxFileSize?: number; // en bytes
-  allowedFileTypes?: string[];
+  attachments: Omit<NoteAttachment, 'id' | 'uploadedAt' | 'filePath'>[];
+  onAttachmentsChange: (attachments: Omit<NoteAttachment, 'id' | 'uploadedAt' | 'filePath'>[]) => void;
   className?: string;
 }
 
-interface FileToUpload extends File {
-  preview?: string;
-}
+const CATEGORIES = {
+  'identificacion_oficial': 'Identificación Oficial',
+  'comprobante_domicilio': 'Comprobante de Domicilio',
+  'informacion_medica': 'Información Médica',
+  'programacion_medicamentos': 'Programación de Medicamentos',
+  'certificados_medicos': 'Certificados Médicos',
+  'estudios_clinicos': 'Estudios Clínicos',
+  'recetas_medicas': 'Recetas Médicas',
+  'comprobante_pago': 'Comprobante de Pago',
+  'poliza_anterior': 'Póliza Anterior',
+  'endoso': 'Endoso',
+  'carta_autorizacion': 'Carta de Autorización',
+  'otro': 'Otro'
+};
 
-const DOCUMENT_CATEGORIES: { value: DocumentCategory; label: string; icon: React.ReactNode; description: string }[] = [
-  { 
-    value: 'informacion_medica', 
-    label: 'Información Médica', 
-    icon: <Stethoscope className="w-4 h-4" />,
-    description: 'Historiales médicos, diagnósticos, informes médicos generales'
-  },
-  { 
-    value: 'programacion_medicamentos', 
-    label: 'Programación de Medicamentos', 
-    icon: <Pill className="w-4 h-4" />,
-    description: 'Horarios de medicamentos, dosis, tratamientos programados'
-  },
-  { 
-    value: 'certificados_medicos', 
-    label: 'Certificados Médicos', 
-    icon: <FileCheck className="w-4 h-4" />,
-    description: 'Certificados de discapacidad, aptitud médica, defunción'
-  },
-  { 
-    value: 'estudios_clinicos', 
-    label: 'Estudios Clínicos', 
-    icon: <Activity className="w-4 h-4" />,
-    description: 'Radiografías, análisis de sangre, resonancias, tomografías'
-  },
-  { 
-    value: 'recetas_medicas', 
-    label: 'Recetas Médicas', 
-    icon: <Heart className="w-4 h-4" />,
-    description: 'Prescripciones médicas, recetas de medicamentos'
-  },
-  { 
-    value: 'renovaciones', 
-    label: 'Renovaciones', 
-    icon: <RefreshCw className="w-4 h-4" />,
-    description: 'Documentos relacionados con renovaciones de póliza'
-  },
-  { 
-    value: 'reembolsos', 
-    label: 'Reembolsos', 
-    icon: <DollarSign className="w-4 h-4" />,
-    description: 'Solicitudes de reembolso, comprobantes, facturas médicas'
-  },
-  { 
-    value: 'indemnizaciones', 
-    label: 'Indemnizaciones', 
-    icon: <Scale className="w-4 h-4" />,
-    description: 'Documentos de siniestros, indemnizaciones, reclamaciones'
-  },
-  { 
-    value: 'comprobantes_pago', 
-    label: 'Comprobantes de Pago', 
-    icon: <FileText className="w-4 h-4" />,
-    description: 'Recibos, facturas, comprobantes de gastos médicos'
-  },
-  { 
-    value: 'documentos_legales', 
-    label: 'Documentos Legales', 
-    icon: <Scale className="w-4 h-4" />,
-    description: 'Contratos, poderes, documentos legales relacionados'
-  },
-  { 
-    value: 'otros', 
-    label: 'Otros', 
-    icon: <File className="w-4 h-4" />,
-    description: 'Otros documentos no categorizados'
-  }
+const SENSITIVE_CATEGORIES = [
+  'informacion_medica',
+  'programacion_medicamentos', 
+  'certificados_medicos',
+  'estudios_clinicos',
+  'recetas_medicas'
 ];
-
-const getFileIcon = (fileType: string) => {
-  if (fileType.startsWith('image/')) return <Image className="w-4 h-4" />;
-  if (fileType.startsWith('video/')) return <FileVideo className="w-4 h-4" />;
-  if (fileType.startsWith('audio/')) return <FileAudio className="w-4 h-4" />;
-  return <FileText className="w-4 h-4" />;
-};
-
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
 
 export const NoteAttachmentUploader: React.FC<NoteAttachmentUploaderProps> = ({
   attachments,
   onAttachmentsChange,
-  maxFiles = 10,
-  maxFileSize = 10 * 1024 * 1024, // 10MB por defecto
-  allowedFileTypes = ['image/*', 'application/pdf', '.doc', '.docx', '.txt', '.xlsx', '.xls'],
   className = ''
 }) => {
-  const [isAddingFile, setIsAddingFile] = useState(false);
-  const [newAttachment, setNewAttachment] = useState<{
-    file: FileToUpload | null;
-    category: DocumentCategory;
-    description: string;
-    esSensible: boolean;
-    esPrivado: boolean;
-    fechaDocumento: string;
-    medicoTratante: string;
-    numeroReceta: string;
-    requiereAutorizacion: boolean;
-  }>({
-    file: null,
-    category: 'otros',
-    description: '',
-    esSensible: false,
-    esPrivado: false,
-    fechaDocumento: '',
-    medicoTratante: '',
-    numeroReceta: '',
-    requiereAutorizacion: false
-  });
+  const [isUploading, setIsUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0 && attachments.length < maxFiles) {
-      const file = acceptedFiles[0] as FileToUpload;
-      
-      // Crear preview para imágenes
-      if (file.type.startsWith('image/')) {
-        file.preview = URL.createObjectURL(file);
-      }
-      
-      setNewAttachment(prev => ({ ...prev, file }));
-      setIsAddingFile(true);
-    }
-  }, [attachments.length, maxFiles]);
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return;
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: allowedFileTypes.reduce((acc, type) => {
-      acc[type] = [];
-      return acc;
-    }, {} as Record<string, string[]>),
-    maxSize: maxFileSize,
-    multiple: false
-  });
-
-  const handleAddAttachment = () => {
-    if (!newAttachment.file) return;
-
-    const attachment: Omit<NoteAttachment, 'id' | 'noteId' | 'uploadedAt' | 'filePath'> = {
-      fileName: `${Date.now()}_${newAttachment.file.name}`,
-      originalName: newAttachment.file.name,
-      fileSize: newAttachment.file.size,
-      fileType: newAttachment.file.type,
-      category: newAttachment.category,
-      description: newAttachment.description,
-      esSensible: newAttachment.esSensible,
-      requiereAutorizacion: newAttachment.requiereAutorizacion,
-      fechaDocumento: newAttachment.fechaDocumento || undefined,
-      medicoTratante: newAttachment.medicoTratante || undefined,
-      numeroReceta: newAttachment.numeroReceta || undefined,
-      uploadedBy: 'Usuario Actual', // En implementación real vendría del contexto
-      esPrivado: newAttachment.esPrivado,
-      autorizadoPor: newAttachment.requiereAutorizacion ? [] : undefined
-    };
-
-    onAttachmentsChange([...attachments, attachment]);
+    setIsUploading(true);
     
-    // Limpiar formulario
-    setNewAttachment({
-      file: null,
-      category: 'otros',
-      description: '',
-      esSensible: false,
-      esPrivado: false,
-      fechaDocumento: '',
-      medicoTratante: '',
-      numeroReceta: '',
-      requiereAutorizacion: false
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        const fileData = e.target?.result as string;
+        
+        const newAttachment: Omit<NoteAttachment, 'id' | 'uploadedAt' | 'filePath'> = {
+          fileName: file.name,
+          fileUrl: fileData,
+          fileSize: file.size,
+          mimeType: file.type,
+          originalName: file.name,
+          fileType: file.type,
+          category: 'otro',
+          description: '',
+          esSensible: false,
+          uploadedBy: 'Usuario Actual' // En implementación real vendría del contexto
+        };
+
+        onAttachmentsChange([...attachments, newAttachment]);
+      };
+      
+      reader.readAsDataURL(file);
     });
-    setIsAddingFile(false);
+
+    setIsUploading(false);
   };
 
-  const handleRemoveAttachment = (index: number) => {
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    handleFileSelect(e.dataTransfer.files);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+
+  const removeAttachment = (index: number) => {
     const newAttachments = attachments.filter((_, i) => i !== index);
     onAttachmentsChange(newAttachments);
   };
 
-  const getCategoryInfo = (category: DocumentCategory) => {
-    return DOCUMENT_CATEGORIES.find(cat => cat.value === category) || DOCUMENT_CATEGORIES[DOCUMENT_CATEGORIES.length - 1];
+  const updateAttachment = (index: number, updates: Partial<NoteAttachment>) => {
+    const newAttachments = attachments.map((attachment, i) => 
+      i === index ? { ...attachment, ...updates } : attachment
+    );
+    onAttachmentsChange(newAttachments);
   };
 
-  const isMedicalCategory = (category: DocumentCategory): boolean => {
-    return ['informacion_medica', 'programacion_medicamentos', 'certificados_medicos', 'estudios_clinicos', 'recetas_medicas'].includes(category);
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType.startsWith('image/')) {
+      return <Image className="w-4 h-4 text-green-600" />;
+    } else if (mimeType === 'application/pdf') {
+      return <FileText className="w-4 h-4 text-red-600" />;
+    } else {
+      return <File className="w-4 h-4 text-gray-600" />;
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Upload className="w-5 h-5 text-blue-600" />
-          <h3 className="text-lg font-semibold">Archivos Adjuntos</h3>
-          <Badge variant="outline">{attachments.length}/{maxFiles}</Badge>
-        </div>
-        {attachments.length < maxFiles && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsAddingFile(true)}
-            disabled={isAddingFile}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Adjuntar Archivo
-          </Button>
-        )}
+    <div className={className}>
+      <Label className="text-sm font-medium mb-3 block">
+        Archivos Adjuntos ({attachments.length})
+      </Label>
+
+      {/* Zona de carga */}
+      <div
+        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+          dragOver 
+            ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' 
+            : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+        }`}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+      >
+        <Paperclip className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+          Arrastra archivos aquí o haz clic para seleccionar
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
+        >
+          <Upload className="w-4 h-4 mr-2" />
+          {isUploading ? 'Subiendo...' : 'Seleccionar Archivos'}
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => handleFileSelect(e.target.files)}
+          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+        />
       </div>
 
       {/* Lista de archivos adjuntos */}
       {attachments.length > 0 && (
-        <div className="space-y-2">
-          {attachments.map((attachment, index) => {
-            const categoryInfo = getCategoryInfo(attachment.category);
-            return (
-              <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50 dark:bg-gray-800">
-                <div className="flex items-center gap-2">
-                  {getFileIcon(attachment.fileType)}
-                  {categoryInfo.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-sm font-medium truncate">{attachment.originalName}</p>
-                    {attachment.esSensible && (
-                      <Badge variant="destructive" className="text-xs">
-                        <Lock className="w-3 h-3 mr-1" />
-                        Sensible
-                      </Badge>
-                    )}
-                    {attachment.esPrivado && (
-                      <Badge variant="secondary" className="text-xs">
-                        <Eye className="w-3 h-3 mr-1" />
-                        Privado
-                      </Badge>
-                    )}
+        <div className="mt-4 space-y-3">
+          {attachments.map((attachment, index) => (
+            <Card key={index} className="border border-gray-200 dark:border-gray-700">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  {/* Icono del archivo */}
+                  <div className="flex-shrink-0 mt-1">
+                    {getFileIcon(attachment.fileType)}
                   </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span>{formatFileSize(attachment.fileSize)}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {categoryInfo.label}
-                    </Badge>
-                    {attachment.description && (
-                      <span className="truncate">{attachment.description}</span>
-                    )}
-                  </div>
-                  {(attachment.medicoTratante || attachment.numeroReceta || attachment.fechaDocumento) && (
-                    <div className="mt-1 text-xs text-blue-600 dark:text-blue-400">
-                      {attachment.medicoTratante && <span>Dr. {attachment.medicoTratante}</span>}
-                      {attachment.numeroReceta && <span> • Receta: {attachment.numeroReceta}</span>}
-                      {attachment.fechaDocumento && (
-                        <span> • {format(new Date(attachment.fechaDocumento), 'dd/MMM/yyyy', { locale: es })}</span>
+
+                  {/* Información del archivo */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className="font-medium text-sm truncate">{attachment.originalName}</p>
+                      {attachment.esSensible && (
+                        <Badge variant="outline" className="text-xs border-red-400 text-red-700">
+                          <Lock className="w-3 h-3 mr-1" />
+                          Sensible
+                        </Badge>
                       )}
                     </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="sm" title="Ver archivo">
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" title="Descargar">
-                    <Download className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleRemoveAttachment(index)}
-                    className="text-red-600 hover:text-red-700"
-                    title="Eliminar archivo"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
 
-      {/* Formulario para agregar archivo */}
-      {isAddingFile && (
-        <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
-          <div className="space-y-4">
-            {/* Zona de drag & drop */}
-            {!newAttachment.file && (
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-                  isDragActive 
-                    ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/30' 
-                    : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/50'
-                }`}
-              >
-                <input {...getInputProps()} />
-                <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                {isDragActive ? (
-                  <p className="text-blue-600">Suelta el archivo aquí...</p>
-                ) : (
-                  <div>
-                    <p className="text-gray-600 mb-2">Arrastra un archivo aquí o haz clic para seleccionar</p>
-                    <p className="text-sm text-gray-500">
-                      Máximo {formatFileSize(maxFileSize)} • Formatos: PDF, DOC, IMG, XLS
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
+                    <div className="text-xs text-gray-500 mb-3">
+                      {formatFileSize(attachment.fileSize)} • {attachment.fileType}
+                    </div>
 
-            {/* Información del archivo seleccionado */}
-            {newAttachment.file && (
-              <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border">
-                {getFileIcon(newAttachment.file.type)}
-                <div className="flex-1">
-                  <p className="font-medium">{newAttachment.file.name}</p>
-                  <p className="text-sm text-gray-500">{formatFileSize(newAttachment.file.size)}</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setNewAttachment(prev => ({ ...prev, file: null }))}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
+                    {/* Campos editables */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Categoría</Label>
+                        <Select
+                          value={attachment.category}
+                          onValueChange={(value) => {
+                            updateAttachment(index, { 
+                              category: value,
+                              esSensible: SENSITIVE_CATEGORIES.includes(value)
+                            });
+                          }}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(CATEGORIES).map(([key, label]) => (
+                              <SelectItem key={key} value={key}>
+                                {label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-            {/* Categoría del documento */}
-            <div>
-              <Label className="text-sm font-medium mb-2 block">Categoría del Documento *</Label>
-              <Select 
-                value={newAttachment.category} 
-                onValueChange={(value) => setNewAttachment(prev => ({ ...prev, category: value as DocumentCategory }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DOCUMENT_CATEGORIES.map((category) => (
-                    <SelectItem key={category.value} value={category.value}>
-                      <div className="flex items-center gap-2">
-                        {category.icon}
-                        <div>
-                          <div className="font-medium">{category.label}</div>
-                          <div className="text-xs text-gray-500">{category.description}</div>
+                      <div>
+                        <Label className="text-xs">Descripción (opcional)</Label>
+                        <Input
+                          value={attachment.description || ''}
+                          onChange={(e) => updateAttachment(index, { description: e.target.value })}
+                          placeholder="Descripción del documento"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Campos específicos para documentos médicos */}
+                    {SENSITIVE_CATEGORIES.includes(attachment.category) && (
+                      <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertTriangle className="w-4 h-4 text-red-600" />
+                          <span className="text-sm font-medium text-red-800 dark:text-red-200">
+                            Información Médica Confidencial
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                          <div>
+                            <Label className="text-xs">Médico Tratante</Label>
+                            <Input
+                              value={attachment.medicoTratante || ''}
+                              onChange={(e) => updateAttachment(index, { medicoTratante: e.target.value })}
+                              placeholder="Dr. Nombre"
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Número de Receta</Label>
+                            <Input
+                              value={attachment.numeroReceta || ''}
+                              onChange={(e) => updateAttachment(index, { numeroReceta: e.target.value })}
+                              placeholder="Número de receta"
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Fecha del Documento</Label>
+                            <Input
+                              type="date"
+                              value={attachment.fechaDocumento || ''}
+                              onChange={(e) => updateAttachment(index, { fechaDocumento: e.target.value })}
+                              className="h-8 text-xs"
+                            />
+                          </div>
                         </div>
                       </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                    )}
 
-            {/* Descripción */}
-            <div>
-              <Label className="text-sm font-medium mb-2 block">Descripción</Label>
-              <Textarea
-                placeholder="Describe el contenido del documento..."
-                value={newAttachment.description}
-                onChange={(e) => setNewAttachment(prev => ({ ...prev, description: e.target.value }))}
-                rows={2}
-              />
-            </div>
+                    {/* Campos específicos para comprobantes de pago */}
+                    {attachment.category === 'comprobante_pago' && (
+                      <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="flex items-center gap-2 mb-2">
+                          <FileText className="w-4 h-4 text-green-600" />
+                          <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                            Información de Pago
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                          <div>
+                            <Label className="text-xs">Número de Póliza</Label>
+                            <Input
+                              value={attachment.numeroPoliza || ''}
+                              onChange={(e) => updateAttachment(index, { numeroPoliza: e.target.value })}
+                              placeholder="Número de póliza"
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Monto</Label>
+                            <Input
+                              type="number"
+                              value={attachment.monto || ''}
+                              onChange={(e) => updateAttachment(index, { monto: parseFloat(e.target.value) || 0 })}
+                              placeholder="0.00"
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Moneda</Label>
+                            <Select
+                              value={attachment.moneda || 'MXN'}
+                              onValueChange={(value) => updateAttachment(index, { moneda: value })}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="MXN">MXN</SelectItem>
+                                <SelectItem value="USD">USD</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
-            {/* Campos específicos para documentos médicos */}
-            {isMedicalCategory(newAttachment.category) && (
-              <div className="space-y-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
-                  <Stethoscope className="w-4 h-4" />
-                  <span className="text-sm font-medium">Información Médica Adicional</span>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs font-medium mb-1 block">Fecha del Documento</Label>
-                    <Input
-                      type="date"
-                      value={newAttachment.fechaDocumento}
-                      onChange={(e) => setNewAttachment(prev => ({ ...prev, fechaDocumento: e.target.value }))}
-                      className="text-sm"
-                    />
+                    {/* Acciones */}
+                    <div className="flex items-center gap-2 mt-3">
+                      <Button variant="ghost" size="sm" title="Ver archivo">
+                        <Eye className="w-3 h-3" />
+                      </Button>
+                      <Button variant="ghost" size="sm" title="Descargar">
+                        <Download className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => removeAttachment(index)}
+                        className="text-red-600 hover:text-red-700"
+                        title="Eliminar archivo"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs font-medium mb-1 block">Médico Tratante</Label>
-                    <Input
-                      placeholder="Dr. Nombre Apellido"
-                      value={newAttachment.medicoTratante}
-                      onChange={(e) => setNewAttachment(prev => ({ ...prev, medicoTratante: e.target.value }))}
-                      className="text-sm"
-                    />
-                  </div>
                 </div>
-                
-                {newAttachment.category === 'recetas_medicas' && (
-                  <div>
-                    <Label className="text-xs font-medium mb-1 block">Número de Receta</Label>
-                    <Input
-                      placeholder="Número de receta médica"
-                      value={newAttachment.numeroReceta}
-                      onChange={(e) => setNewAttachment(prev => ({ ...prev, numeroReceta: e.target.value }))}
-                      className="text-sm"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Configuración de privacidad y seguridad */}
-            <div className="space-y-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-              <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
-                <Lock className="w-4 h-4" />
-                <span className="text-sm font-medium">Configuración de Privacidad</span>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="esSensible"
-                    checked={newAttachment.esSensible}
-                    onCheckedChange={(checked) => setNewAttachment(prev => ({ ...prev, esSensible: checked as boolean }))}
-                  />
-                  <Label htmlFor="esSensible" className="text-sm">
-                    Información sensible/confidencial
-                  </Label>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="esPrivado"
-                    checked={newAttachment.esPrivado}
-                    onCheckedChange={(checked) => setNewAttachment(prev => ({ ...prev, esPrivado: checked as boolean }))}
-                  />
-                  <Label htmlFor="esPrivado" className="text-sm">
-                    Documento privado (acceso restringido)
-                  </Label>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="requiereAutorizacion"
-                    checked={newAttachment.requiereAutorizacion}
-                    onCheckedChange={(checked) => setNewAttachment(prev => ({ ...prev, requiereAutorizacion: checked as boolean }))}
-                  />
-                  <Label htmlFor="requiereAutorizacion" className="text-sm">
-                    Requiere autorización para acceso
-                  </Label>
-                </div>
-              </div>
-              
-              {(newAttachment.esSensible || newAttachment.esPrivado) && (
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="text-sm">
-                    Este documento será marcado con restricciones de acceso según la configuración seleccionada.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-
-            {/* Botones de acción */}
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsAddingFile(false);
-                  setNewAttachment({
-                    file: null,
-                    category: 'otros',
-                    description: '',
-                    esSensible: false,
-                    esPrivado: false,
-                    fechaDocumento: '',
-                    medicoTratante: '',
-                    numeroReceta: '',
-                    requiereAutorizacion: false
-                  });
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleAddAttachment}
-                disabled={!newAttachment.file}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Agregar Archivo
-              </Button>
-            </div>
-          </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 
-      {/* Información de ayuda */}
-      {attachments.length === 0 && !isAddingFile && (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-          <Upload className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p className="text-sm">No hay archivos adjuntos</p>
-          <p className="text-xs">Haz clic en "Adjuntar Archivo" para comenzar</p>
+      {/* Información sobre archivos sensibles */}
+      {attachments.some(a => a.esSensible) && (
+        <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+          <div className="flex items-start gap-2">
+            <Lock className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="text-xs text-amber-800 dark:text-amber-200">
+              <p className="font-medium mb-1">Archivos con Información Sensible</p>
+              <p>
+                Los archivos marcados como sensibles contienen información médica confidencial 
+                y están protegidos con medidas de seguridad adicionales.
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>

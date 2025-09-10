@@ -37,7 +37,14 @@ import {
   Plus,
   Edit,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  RotateCcw,
+  Car,
+  Database,
+  Trash,
+  Upload,
+  FileSpreadsheet,
+  Settings
 } from 'lucide-react';
 import { Policy } from '@/types/policy';
 import { getPolicies } from '@/data/policies';
@@ -107,6 +114,11 @@ export const Cobranza: React.FC = () => {
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isPaymentPlanModalOpen, setIsPaymentPlanModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [isRenewalModalOpen, setIsRenewalModalOpen] = useState(false);
+  const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isCleanupModalOpen, setIsCleanupModalOpen] = useState(false);
+  const [isAutoInsuranceViewOpen, setIsAutoInsuranceViewOpen] = useState(false);
   
   // Estados para acciones de cobranza
   const [cobranzaActions, setCobranzaActions] = useState<CobranzaAction[]>([]);
@@ -118,6 +130,41 @@ export const Cobranza: React.FC = () => {
     description: '',
     scheduledDate: '',
     notes: ''
+  });
+
+  // Estados para renovación
+  const [renewalData, setRenewalData] = useState({
+    newPremium: '',
+    newStartDate: '',
+    newEndDate: '',
+    notes: ''
+  });
+
+  // Estados para movimientos de póliza
+  const [policyMovement, setPolicyMovement] = useState({
+    type: 'status_change' as 'status_change' | 'payment' | 'renewal' | 'cancellation' | 'endorsement',
+    description: '',
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    notes: ''
+  });
+
+  // Estados para exportación
+  const [exportOptions, setExportOptions] = useState({
+    format: 'excel' as 'excel' | 'csv' | 'pdf',
+    includeActions: true,
+    includeHistory: true,
+    dateRange: 'all' as 'all' | 'current_month' | 'last_3_months' | 'custom',
+    customStartDate: '',
+    customEndDate: ''
+  });
+
+  // Estados para limpieza de datos
+  const [cleanupOptions, setCleanupOptions] = useState({
+    deleteOldActions: false,
+    deleteOldLogs: false,
+    archiveOldPolicies: false,
+    daysOld: 365
   });
 
   // Cargar datos
@@ -250,6 +297,107 @@ export const Cobranza: React.FC = () => {
           }
         : policy
     ));
+  };
+
+  // Función para procesar renovación
+  const handleProcessRenewal = () => {
+    if (!selectedPolicy || !renewalData.newPremium || !renewalData.newStartDate || !renewalData.newEndDate) return;
+
+    // Crear nueva póliza renovada
+    const renewedPolicy: Policy = {
+      ...selectedPolicy,
+      id: `renewed-${selectedPolicy.id}-${Date.now()}`,
+      policyNumber: `${selectedPolicy.policyNumber}-REN`,
+      fechaInicio: renewalData.newStartDate,
+      fechaVencimiento: renewalData.newEndDate,
+      total: parseFloat(renewalData.newPremium),
+      status: 'active',
+      hasPendingPayment: false,
+      fechaPagoActual: new Date().toISOString().split('T')[0]
+    };
+
+    // Agregar a la lista de pólizas
+    setPolicies(prev => [renewedPolicy, ...prev]);
+
+    // Marcar póliza original como renovada
+    setPolicies(prev => prev.map(policy => 
+      policy.id === selectedPolicy.id 
+        ? { ...policy, status: 'renewed' }
+        : policy
+    ));
+
+    // Limpiar formulario
+    setRenewalData({ newPremium: '', newStartDate: '', newEndDate: '', notes: '' });
+    setIsRenewalModalOpen(false);
+  };
+
+  // Función para registrar movimiento de póliza
+  const handleRegisterMovement = () => {
+    if (!selectedPolicy || !policyMovement.description.trim()) return;
+
+    // Crear movimiento
+    const movement = {
+      id: `movement-${Date.now()}`,
+      policyId: selectedPolicy.id,
+      type: policyMovement.type,
+      description: policyMovement.description,
+      amount: policyMovement.amount ? parseFloat(policyMovement.amount) : undefined,
+      date: policyMovement.date,
+      notes: policyMovement.notes,
+      createdBy: 'Usuario Actual'
+    };
+
+    // Aquí se guardaría en la base de datos
+    console.log('Movimiento registrado:', movement);
+
+    // Limpiar formulario
+    setPolicyMovement({
+      type: 'status_change',
+      description: '',
+      amount: '',
+      date: new Date().toISOString().split('T')[0],
+      notes: ''
+    });
+    setIsMovementModalOpen(false);
+  };
+
+  // Función para exportar cartera
+  const handleExportPortfolio = () => {
+    const exportData = {
+      policies: filteredPolicies,
+      actions: exportOptions.includeActions ? cobranzaActions : [],
+      exportDate: new Date().toISOString(),
+      format: exportOptions.format
+    };
+
+    // Simular exportación
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cartera-cobranza-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    setIsExportModalOpen(false);
+  };
+
+  // Función para limpiar datos
+  const handleCleanupData = () => {
+    // Simular limpieza de datos
+    if (cleanupOptions.deleteOldActions) {
+      setCobranzaActions(prev => prev.filter(action => {
+        const actionDate = new Date(action.completedDate || action.scheduledDate || '');
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - cleanupOptions.daysOld);
+        return actionDate > cutoffDate;
+      }));
+    }
+
+    // Mostrar confirmación
+    alert(`Limpieza completada. Se eliminaron registros anteriores a ${cleanupOptions.daysOld} días.`);
+    setIsCleanupModalOpen(false);
   };
 
   const getPriorityLevel = (policy: Policy): { level: 'critical' | 'high' | 'medium' | 'low'; label: string; color: string } => {
@@ -464,9 +612,29 @@ export const Cobranza: React.FC = () => {
               Cartera de Cobranza ({filteredPolicies.length})
             </CardTitle>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setIsExportModalOpen(true)}
+              >
                 <Download className="w-4 h-4 mr-2" />
                 Exportar
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setIsCleanupModalOpen(true)}
+              >
+                <Trash className="w-4 h-4 mr-2" />
+                Limpiar Datos
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setIsAutoInsuranceViewOpen(true)}
+              >
+                <Car className="w-4 h-4 mr-2" />
+                Seguros de Auto
               </Button>
             </div>
           </div>
@@ -567,6 +735,29 @@ export const Cobranza: React.FC = () => {
                               title="Contactar"
                             >
                               <Phone className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPolicy(policy);
+                                setIsRenewalModalOpen(true);
+                              }}
+                              title="Renovar póliza"
+                              className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPolicy(policy);
+                                setIsMovementModalOpen(true);
+                              }}
+                              title="Registrar movimiento"
+                            >
+                              <Edit className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="default"
@@ -702,6 +893,437 @@ export const Cobranza: React.FC = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Modal de Renovación */}
+      <Modal
+        isOpen={isRenewalModalOpen}
+        onClose={() => setIsRenewalModalOpen(false)}
+        title={`Renovar Póliza - ${selectedPolicy?.policyNumber || ''}`}
+        size="lg"
+      >
+        {selectedPolicy && (
+          <div className="space-y-4">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+              <h4 className="font-medium mb-2">Información de la Póliza Actual</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p><strong>Cliente:</strong> {selectedPolicy.contratante?.nombre}</p>
+                  <p><strong>Prima Actual:</strong> ${(selectedPolicy.total || 0).toLocaleString('es-MX')}</p>
+                </div>
+                <div>
+                  <p><strong>Vigencia:</strong> {format(parseISO(selectedPolicy.fechaInicio), 'dd/MM/yyyy', { locale: es })} - {format(parseISO(selectedPolicy.fechaVencimiento), 'dd/MM/yyyy', { locale: es })}</p>
+                  <p><strong>Ramo:</strong> {selectedPolicy.ramo}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Nueva Prima</label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={renewalData.newPremium}
+                  onChange={(e) => setRenewalData(prev => ({ ...prev, newPremium: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Fecha de Inicio</label>
+                <Input
+                  type="date"
+                  value={renewalData.newStartDate}
+                  onChange={(e) => setRenewalData(prev => ({ ...prev, newStartDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Fecha de Vencimiento</label>
+                <Input
+                  type="date"
+                  value={renewalData.newEndDate}
+                  onChange={(e) => setRenewalData(prev => ({ ...prev, newEndDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Notas de Renovación</label>
+                <Textarea
+                  placeholder="Observaciones sobre la renovación..."
+                  value={renewalData.notes}
+                  onChange={(e) => setRenewalData(prev => ({ ...prev, notes: e.target.value }))}
+                  rows={3}
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsRenewalModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleProcessRenewal} className="bg-blue-600 hover:bg-blue-700">
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Procesar Renovación
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal de Movimiento de Póliza */}
+      <Modal
+        isOpen={isMovementModalOpen}
+        onClose={() => setIsMovementModalOpen(false)}
+        title={`Registrar Movimiento - ${selectedPolicy?.policyNumber || ''}`}
+        size="lg"
+      >
+        {selectedPolicy && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Tipo de Movimiento</label>
+                <Select value={policyMovement.type} onValueChange={(value) => setPolicyMovement(prev => ({ ...prev, type: value as any }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="status_change">Cambio de Estado</SelectItem>
+                    <SelectItem value="payment">Pago Recibido</SelectItem>
+                    <SelectItem value="renewal">Renovación</SelectItem>
+                    <SelectItem value="cancellation">Cancelación</SelectItem>
+                    <SelectItem value="endorsement">Endoso</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Fecha del Movimiento</label>
+                <Input
+                  type="date"
+                  value={policyMovement.date}
+                  onChange={(e) => setPolicyMovement(prev => ({ ...prev, date: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Monto (si aplica)</label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={policyMovement.amount}
+                  onChange={(e) => setPolicyMovement(prev => ({ ...prev, amount: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Descripción del Movimiento</label>
+              <Textarea
+                placeholder="Describe el movimiento realizado..."
+                value={policyMovement.description}
+                onChange={(e) => setPolicyMovement(prev => ({ ...prev, description: e.target.value }))}
+                rows={3}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Notas Adicionales</label>
+              <Textarea
+                placeholder="Notas internas, observaciones..."
+                value={policyMovement.notes}
+                onChange={(e) => setPolicyMovement(prev => ({ ...prev, notes: e.target.value }))}
+                rows={2}
+              />
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsMovementModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleRegisterMovement}>
+                <Edit className="w-4 h-4 mr-2" />
+                Registrar Movimiento
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal de Exportación */}
+      <Modal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        title="Exportar Cartera de Cobranza"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Formato de Exportación</label>
+              <Select value={exportOptions.format} onValueChange={(value) => setExportOptions(prev => ({ ...prev, format: value as any }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="excel">Excel (.xlsx)</SelectItem>
+                  <SelectItem value="csv">CSV (.csv)</SelectItem>
+                  <SelectItem value="pdf">PDF (.pdf)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Rango de Fechas</label>
+              <Select value={exportOptions.dateRange} onValueChange={(value) => setExportOptions(prev => ({ ...prev, dateRange: value as any }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los registros</SelectItem>
+                  <SelectItem value="current_month">Mes actual</SelectItem>
+                  <SelectItem value="last_3_months">Últimos 3 meses</SelectItem>
+                  <SelectItem value="custom">Rango personalizado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          {exportOptions.dateRange === 'custom' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Fecha de Inicio</label>
+                <Input
+                  type="date"
+                  value={exportOptions.customStartDate}
+                  onChange={(e) => setExportOptions(prev => ({ ...prev, customStartDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Fecha de Fin</label>
+                <Input
+                  type="date"
+                  value={exportOptions.customEndDate}
+                  onChange={(e) => setExportOptions(prev => ({ ...prev, customEndDate: e.target.value }))}
+                />
+              </div>
+            </div>
+          )}
+          
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="includeActions"
+                checked={exportOptions.includeActions}
+                onChange={(e) => setExportOptions(prev => ({ ...prev, includeActions: e.target.checked }))}
+                className="rounded"
+              />
+              <label htmlFor="includeActions" className="text-sm">Incluir historial de acciones</label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="includeHistory"
+                checked={exportOptions.includeHistory}
+                onChange={(e) => setExportOptions(prev => ({ ...prev, includeHistory: e.target.checked }))}
+                className="rounded"
+              />
+              <label htmlFor="includeHistory" className="text-sm">Incluir historial de movimientos</label>
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsExportModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleExportPortfolio} className="bg-green-600 hover:bg-green-700">
+              <Download className="w-4 h-4 mr-2" />
+              Exportar Cartera
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de Limpieza de Datos */}
+      <Modal
+        isOpen={isCleanupModalOpen}
+        onClose={() => setIsCleanupModalOpen(false)}
+        title="Limpieza de Datos"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <Alert className="border-yellow-200 bg-yellow-50">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Advertencia</AlertTitle>
+            <AlertDescription>
+              Esta acción eliminará permanentemente los datos seleccionados. Esta acción no se puede deshacer.
+            </AlertDescription>
+          </Alert>
+          
+          <div>
+            <label className="text-sm font-medium mb-2 block">Eliminar registros anteriores a:</label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                value={cleanupOptions.daysOld}
+                onChange={(e) => setCleanupOptions(prev => ({ ...prev, daysOld: parseInt(e.target.value) || 365 }))}
+                className="w-24"
+              />
+              <span className="text-sm text-gray-600">días</span>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="deleteOldActions"
+                checked={cleanupOptions.deleteOldActions}
+                onChange={(e) => setCleanupOptions(prev => ({ ...prev, deleteOldActions: e.target.checked }))}
+                className="rounded"
+              />
+              <label htmlFor="deleteOldActions" className="text-sm">Eliminar acciones de cobranza antiguas</label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="deleteOldLogs"
+                checked={cleanupOptions.deleteOldLogs}
+                onChange={(e) => setCleanupOptions(prev => ({ ...prev, deleteOldLogs: e.target.checked }))}
+                className="rounded"
+              />
+              <label htmlFor="deleteOldLogs" className="text-sm">Eliminar logs antiguos</label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="archiveOldPolicies"
+                checked={cleanupOptions.archiveOldPolicies}
+                onChange={(e) => setCleanupOptions(prev => ({ ...prev, archiveOldPolicies: e.target.checked }))}
+                className="rounded"
+              />
+              <label htmlFor="archiveOldPolicies" className="text-sm">Archivar pólizas antiguas</label>
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsCleanupModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCleanupData} className="bg-red-600 hover:bg-red-700">
+              <Trash className="w-4 h-4 mr-2" />
+              Ejecutar Limpieza
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de Vista de Seguros de Auto */}
+      <Modal
+        isOpen={isAutoInsuranceViewOpen}
+        onClose={() => setIsAutoInsuranceViewOpen(false)}
+        title="Seguros de Auto - Vista Especializada"
+        size="xl"
+      >
+        <div className="space-y-6">
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+            <h4 className="font-medium mb-2 flex items-center gap-2">
+              <Car className="w-5 h-5" />
+              Pólizas de Auto en Cobranza
+            </h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Vista especializada para seguros de auto con variables específicas del vehículo
+            </p>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Póliza</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Vehículo</TableHead>
+                  <TableHead>Número de Serie</TableHead>
+                  <TableHead>Tipo de Carro</TableHead>
+                  <TableHead>Modelo/Año</TableHead>
+                  <TableHead>Monto Adeudado</TableHead>
+                  <TableHead>Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredPolicies
+                  .filter(policy => policy.ramo?.toLowerCase().includes('auto') || policy.ramo?.toLowerCase().includes('vehicular'))
+                  .map((policy) => (
+                    <TableRow key={policy.id}>
+                      <TableCell className="font-medium">
+                        <div>
+                          <p className="font-semibold">{policy.policyNumber}</p>
+                          <p className="text-sm text-gray-500">{policy.aseguradora}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{policy.contratante?.nombre}</p>
+                          <p className="text-sm text-gray-500">{policy.contratante?.rfc}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Car className="w-4 h-4 text-gray-500" />
+                          <span>Vehículo</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                          {policy.policyNumber.slice(-8)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">Sedán</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">2020</span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-semibold text-lg">
+                          ${(policy.total || 0).toLocaleString('es-MX')}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPolicy(policy);
+                              setIsRenewalModalOpen(true);
+                            }}
+                            title="Renovar póliza de auto"
+                            className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPolicy(policy);
+                              setIsContactModalOpen(true);
+                            }}
+                            title="Contactar cliente"
+                          >
+                            <Phone className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </div>
+          
+          {filteredPolicies.filter(policy => policy.ramo?.toLowerCase().includes('auto') || policy.ramo?.toLowerCase().includes('vehicular')).length === 0 && (
+            <div className="text-center py-8">
+              <Car className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600 dark:text-gray-400">
+                No hay pólizas de auto en cobranza
+              </p>
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );
