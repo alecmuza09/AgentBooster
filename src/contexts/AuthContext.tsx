@@ -31,6 +31,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Timeout de seguridad para evitar loading infinito
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn('AuthContext: Timeout en carga de autenticación, usando modo desarrollo');
+        setLoading(false);
+      }
+    }, 5000); // 5 segundos de timeout
+
     // Verificar si las credenciales de Supabase están configuradas
     if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
       console.warn('Supabase credentials not configured. Using mock user for development.');
@@ -46,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       setUser(mockUser);
       setLoading(false);
+      clearTimeout(timeoutId);
       return;
     }
 
@@ -57,6 +66,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loadUserProfile(session.user.id);
       }
       setLoading(false);
+      clearTimeout(timeoutId);
+    }).catch((error) => {
+      console.error('Error getting session:', error);
+      setLoading(false);
+      clearTimeout(timeoutId);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -71,7 +85,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const loadUserProfile = async (userId: string) => {

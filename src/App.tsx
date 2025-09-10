@@ -20,15 +20,14 @@ import { Admin } from './pages/Admin';
 import { CourseDetailAdmin } from './pages/CourseDetailAdmin';
 import DocumentControl from './pages/DocumentControl';
 import { Cobranza } from './pages/Cobranza';
+import TestApp from './TestApp';
 
 function App() {
-  // Eliminar el useEffect temporal que muestra el UUID
-
   return (
-    <AuthProvider>
-      <Router>
+    <Router>
         <Suspense fallback={<div className="flex justify-center items-center h-screen"><LoadingSpinner /></div>}>
           <Routes>
+            <Route path="/test" element={<TestApp />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             <Route
@@ -55,8 +54,7 @@ function App() {
             </Route>
           </Routes>
         </Suspense>
-      </Router>
-    </AuthProvider>
+    </Router>
   );
 }
 
