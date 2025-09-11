@@ -141,17 +141,19 @@ const adminNavItems = [
 ];
 
 export const Layout: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
-      await logout();
+      console.log('Layout: Iniciando proceso de cierre de sesión...');
+      await signOut();
+      console.log('Layout: Sesión cerrada exitosamente');
       navigate('/login');
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      console.error('Layout: Error al cerrar sesión:', error);
     }
   };
 

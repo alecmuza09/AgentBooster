@@ -149,10 +149,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      console.log('AuthContext: Iniciando cierre de sesión...');
       setError(null);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      // Limpiar estado local
+      setUser(null);
+      setProfile(null);
+      console.log('AuthContext: Sesión cerrada exitosamente');
     } catch (err) {
+      console.error('AuthContext: Error al cerrar sesión:', err);
       setError(err instanceof Error ? err.message : 'An error occurred during sign out');
     }
   };
