@@ -68,31 +68,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         clearTimeout(timeoutId);
       } else {
-        console.log('AuthContext: No hay sesión existente, intentando auto-login...');
-        // Auto-login con usuario de prueba solo si no hay sesión
-        supabase.auth.signInWithPassword({
-          email: 'test@agentbooster.com',
-          password: 'testpassword123'
-        }).then(({ data: loginData, error: loginError }) => {
-          if (loginError) {
-            console.warn('AuthContext: Error en auto-login:', loginError.message);
-            console.log('AuthContext: Continuando sin autenticación automática');
-            setLoading(false);
-            clearTimeout(timeoutId);
-          } else {
-            console.log('AuthContext: Auto-login exitoso');
-            setUser(loginData.user);
-            if (loginData.user) {
-              loadUserProfile(loginData.user.id);
-            }
-            setLoading(false);
-            clearTimeout(timeoutId);
-          }
-        }).catch((error) => {
-          console.error('AuthContext: Error en auto-login:', error);
-          setLoading(false);
-          clearTimeout(timeoutId);
-        });
+        console.log('AuthContext: No hay sesión existente');
+        console.log('AuthContext: Usuario debe hacer login manualmente');
+        setLoading(false);
+        clearTimeout(timeoutId);
       }
     }).catch((error) => {
       console.error('AuthContext: Error verificando sesión:', error);
