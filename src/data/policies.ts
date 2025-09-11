@@ -172,14 +172,11 @@ export type InsuranceType = 'Vida' | 'Gastos Médicos' | 'Auto' | 'Hogar' | 'Otr
 
 export const getPolicies = async (): Promise<Policy[]> => {
     try {
-        console.log('Attempting to fetch policies from Supabase...');
-        console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
-        console.log('Supabase Anon Key exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+        console.log('Policies: Intentando obtener pólizas desde Supabase...');
         
         // Verificar si las credenciales están configuradas
         if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-            console.error('Supabase credentials not configured. Please check your .env file.');
-            console.log('Falling back to example policies due to missing credentials');
+            console.warn('Policies: Credenciales de Supabase no configuradas, usando datos mock');
             return examplePolicies;
         }
         
@@ -189,16 +186,16 @@ export const getPolicies = async (): Promise<Policy[]> => {
             .select('*');
 
         if (policiesError) {
-            console.error('Error fetching policies from Supabase:', policiesError);
-            console.log('Falling back to example policies due to Supabase error');
+            console.error('Policies: Error obteniendo pólizas desde Supabase:', policiesError);
+            console.log('Policies: Usando datos mock debido a error');
             return examplePolicies;
         }
 
-        console.log('Raw policies data from Supabase:', policiesData);
+        console.log('Policies: Datos obtenidos desde Supabase:', policiesData?.length || 0);
 
         // Si no hay datos en la base de datos, usar los datos de ejemplo
         if (!policiesData || policiesData.length === 0) {
-            console.log('No policies found in database, using example policies');
+            console.log('Policies: No hay pólizas en la base de datos, usando datos mock');
             return examplePolicies;
         }
 

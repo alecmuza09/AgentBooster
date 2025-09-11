@@ -58,38 +58,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Auto-login con usuario de prueba para desarrollo
-    console.log('AuthContext: Intentando auto-login con usuario de prueba...');
-    supabase.auth.signInWithPassword({
-      email: 'test@agentbooster.com',
-      password: 'testpassword123'
-    }).then(({ data: loginData, error: loginError }) => {
-      if (loginError) {
-        console.warn('AuthContext: Error en auto-login:', loginError.message);
-        // Continuar con el flujo normal de autenticación
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          setUser(session?.user ?? null);
-          if (session?.user) {
-            loadUserProfile(session.user.id);
+    // Verificar sesión existente primero
+    console.log('AuthContext: Verificando sesión existente...');
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        console.log('AuthContext: Sesión existente encontrada:', session.user.email);
+        setUser(session.user);
+        loadUserProfile(session.user.id);
+        setLoading(false);
+        clearTimeout(timeoutId);
+      } else {
+        console.log('AuthContext: No hay sesión existente, intentando auto-login...');
+        // Auto-login con usuario de prueba solo si no hay sesión
+        supabase.auth.signInWithPassword({
+          email: 'test@agentbooster.com',
+          password: 'testpassword123'
+        }).then(({ data: loginData, error: loginError }) => {
+          if (loginError) {
+            console.warn('AuthContext: Error en auto-login:', loginError.message);
+            console.log('AuthContext: Continuando sin autenticación automática');
+            setLoading(false);
+            clearTimeout(timeoutId);
+          } else {
+            console.log('AuthContext: Auto-login exitoso');
+            setUser(loginData.user);
+            if (loginData.user) {
+              loadUserProfile(loginData.user.id);
+            }
+            setLoading(false);
+            clearTimeout(timeoutId);
           }
-          setLoading(false);
-          clearTimeout(timeoutId);
         }).catch((error) => {
-          console.error('Error getting session:', error);
+          console.error('AuthContext: Error en auto-login:', error);
           setLoading(false);
           clearTimeout(timeoutId);
         });
-      } else {
-        console.log('AuthContext: Auto-login exitoso');
-        setUser(loginData.user);
-        if (loginData.user) {
-          loadUserProfile(loginData.user.id);
-        }
-        setLoading(false);
-        clearTimeout(timeoutId);
       }
     }).catch((error) => {
-      console.error('AuthContext: Error en auto-login:', error);
+      console.error('AuthContext: Error verificando sesión:', error);
       setLoading(false);
       clearTimeout(timeoutId);
     });
