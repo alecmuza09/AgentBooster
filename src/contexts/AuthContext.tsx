@@ -31,108 +31,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let isMounted = true; // Para evitar actualizaciones de estado en componentes desmontados
-
     // Timeout de seguridad para evitar loading infinito
     const timeoutId = setTimeout(() => {
-      if (loading && isMounted) {
-        console.warn('AuthContext: Timeout en carga de autenticación');
-        console.log('AuthContext: Verificando configuración de Supabase...');
-
-        // Verificar si las credenciales están configuradas
-        const hasSupabaseCredentials = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-        if (!hasSupabaseCredentials) {
-          console.warn('Supabase credentials not configured. Using mock mode for development.');
-          // En modo desarrollo sin credenciales, permitir login manual
-          setLoading(false);
-        } else {
-          console.error('AuthContext: Timeout pero credenciales configuradas - posible problema de conexión');
-          setError('Error de conexión. Verifica tu conexión a internet.');
-          setLoading(false);
-        }
+      if (loading) {
+        console.warn('AuthContext: Timeout en carga, usando modo desarrollo');
+        setLoading(false);
       }
-    }, 10000); // 10 segundos de timeout (aumentado)
+    }, 3000); // 3 segundos de timeout
 
-    // Función para verificar conexión a Supabase
-    const checkSupabaseConnection = async () => {
-      try {
-        console.log('AuthContext: Verificando conexión a Supabase...');
-        // Hacer una consulta simple para verificar conexión
-        const { error } = await supabase.from('profiles').select('id').limit(1);
-        return !error;
-      } catch (error) {
-        console.error('AuthContext: Error conectando a Supabase:', error);
-        return false;
-      }
-    };
+    // Verificar si las credenciales están configuradas
+    const hasCredentials = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-    // Verificar si las credenciales de Supabase están configuradas
-    const hasSupabaseCredentials = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
+    if (!hasCredentials) {
+      console.log('AuthContext: Sin credenciales, modo desarrollo activado');
+      // Simular usuario autenticado para desarrollo
+      const mockUser = {
+        id: 'dev-user-123',
+        email: 'usuario@desarrollo.com',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        aud: 'authenticated',
+        role: 'authenticated'
+      } as User;
 
-    if (!hasSupabaseCredentials) {
-      console.warn('Supabase credentials not configured. Using development mode.');
-      // En desarrollo sin credenciales, no hacer login automático
+      setUser(mockUser);
+      setProfile({
+        id: mockUser.id,
+        full_name: 'Usuario Desarrollo',
+        avatar_url: null,
+        cedula_type: null,
+        cedula_expiration_date: null,
+        agencia: 'Desarrollo'
+      });
       setLoading(false);
       clearTimeout(timeoutId);
       return;
     }
 
-    // Intentar conectarse a Supabase
-    checkSupabaseConnection().then((isConnected) => {
-      if (!isMounted) return;
-
-      if (!isConnected) {
-        console.warn('AuthContext: No se pudo conectar a Supabase, usando modo offline');
-        setError('No se pudo conectar a Supabase. Verifica tu conexión.');
-        setLoading(false);
-        clearTimeout(timeoutId);
-        return;
+    // Verificar sesión existente con Supabase
+    console.log('AuthContext: Verificando sesión existente...');
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        console.log('AuthContext: Sesión encontrada:', session.user.email);
+        setUser(session.user);
+        loadUserProfile(session.user.id);
+      } else {
+        console.log('AuthContext: No hay sesión, esperando login');
       }
-
-      console.log('AuthContext: Conexión a Supabase exitosa, verificando sesión...');
-
-      // Verificar sesión existente
-      supabase.auth.getSession().then(({ data: { session }, error }) => {
-        if (!isMounted) return;
-
-        if (error) {
-          console.error('AuthContext: Error obteniendo sesión:', error);
-          setError('Error al verificar sesión. Intenta recargar la página.');
-          setLoading(false);
-          clearTimeout(timeoutId);
-          return;
-        }
-
-        if (session?.user) {
-          console.log('AuthContext: Sesión existente encontrada:', session.user.email);
-          setUser(session.user);
-          loadUserProfile(session.user.id);
-        } else {
-          console.log('AuthContext: No hay sesión existente - usuario debe hacer login');
-        }
-
-        setLoading(false);
-        clearTimeout(timeoutId);
-      }).catch((error) => {
-        if (!isMounted) return;
-        console.error('AuthContext: Error verificando sesión:', error);
-        setError('Error al verificar sesión.');
-        setLoading(false);
-        clearTimeout(timeoutId);
-      });
+      setLoading(false);
+      clearTimeout(timeoutId);
+    }).catch((error) => {
+      console.error('AuthContext: Error verificando sesión:', error);
+      setLoading(false);
+      clearTimeout(timeoutId);
     });
 
-    // Configurar listener de cambios de autenticación
+    // Listener de cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!isMounted) return;
-
-      console.log('AuthContext: Auth state changed:', _event, session?.user?.email || 'null');
+      console.log('Auth state changed:', session?.user?.email || 'logout');
       setUser(session?.user ?? null);
-      setError(null); // Limpiar errores cuando cambia el estado
-
       if (session?.user) {
-        // Cargar perfil del usuario
         await loadUserProfile(session.user.id);
       } else {
         setProfile(null);
@@ -140,7 +98,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
-      isMounted = false;
       subscription.unsubscribe();
       clearTimeout(timeoutId);
     };
@@ -168,75 +125,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       setError(null);
-      console.log('AuthContext: Intentando login con:', email);
 
-      // Verificar si las credenciales de Supabase están configuradas
-      const hasSupabaseCredentials = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
+      // Verificar si las credenciales están configuradas
+      const hasCredentials = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      if (!hasSupabaseCredentials) {
-        console.log('AuthContext: Credenciales no configuradas, usando login mock');
+      if (!hasCredentials) {
+        // Modo desarrollo: cualquier login funciona
+        console.log('AuthContext: Modo desarrollo - login automático');
+        const mockUser = {
+          id: 'dev-user-123',
+          email: email || 'usuario@desarrollo.com',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          aud: 'authenticated',
+          role: 'authenticated'
+        } as User;
 
-        // Login mock para desarrollo
-        if (email && password) {
-          console.log('AuthContext: Login mock exitoso');
-          const mockUser = {
-            id: 'mock-user-' + Date.now(),
-            email: email,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            aud: 'authenticated',
-            role: 'authenticated'
-          } as User;
-
-          // Simular perfil
-          const mockProfile = {
-            id: mockUser.id,
-            full_name: email.split('@')[0],
-            avatar_url: null,
-            cedula_type: null,
-            cedula_expiration_date: null,
-            agencia: 'Desarrollo'
-          };
-
-          setUser(mockUser);
-          setProfile(mockProfile);
-          return;
-        } else {
-          throw new Error('Email y contraseña son requeridos');
-        }
+        setUser(mockUser);
+        setProfile({
+          id: mockUser.id,
+          full_name: email.split('@')[0] || 'Usuario Desarrollo',
+          avatar_url: null,
+          cedula_type: null,
+          cedula_expiration_date: null,
+          agencia: 'Desarrollo'
+        });
+        return;
       }
 
-      // Intentar login con Supabase
+      // Modo producción: usar Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password
       });
 
-      console.log('AuthContext: Respuesta de Supabase:', { success: !error, user: data?.user?.email });
-
       if (error) {
-        // Manejar errores específicos de Supabase
-        if (error.message.includes('Invalid login credentials')) {
-          throw new Error('Credenciales inválidas. Verifica tu email y contraseña.');
-        }
-        if (error.message.includes('Email not confirmed')) {
-          throw new Error('Email no confirmado. Revisa tu correo y confirma tu cuenta.');
-        }
-        if (error.message.includes('Too many requests')) {
-          throw new Error('Demasiados intentos. Espera un momento antes de intentar nuevamente.');
-        }
-        throw error;
+        throw new Error(error.message);
       }
 
       if (!data.user) {
-        throw new Error('No se pudo autenticar el usuario');
+        throw new Error('Error en la autenticación');
       }
 
-      console.log('AuthContext: Login exitoso para:', data.user.email);
-
     } catch (err) {
-      console.error('AuthContext: Error durante login:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido durante el inicio de sesión';
+      const errorMessage = err instanceof Error ? err.message : 'Error en el login';
       setError(errorMessage);
       throw new Error(errorMessage);
     }

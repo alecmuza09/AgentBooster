@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,11 @@ import {
   Building2,
   Bell
 } from 'lucide-react';
-import { useDashboardData } from '@/hooks/useDashboardData';
+import { Policy } from '@/types/policy';
+import { getPolicies } from '@/data/policies';
+import { getLeads } from '@/data/leads';
+import { getClients } from '@/data/clients';
+import { updatePolicyStatuses } from '@/utils/paymentUtils';
 import { differenceInDays, parseISO, addDays } from 'date-fns';
 
 interface DashboardStats {
@@ -51,9 +55,35 @@ interface QuickAction {
 
 export const Dashboard: React.FC = () => {
     const navigate = useNavigate();
-    const { data, isLoading, error, refresh, lastUpdated } = useDashboardData();
+    const [policies, setPolicies] = useState<Policy[]>([]);
+    const [leads, setLeads] = useState<any[]>([]);
+    const [clients, setClients] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const { policies, leads, clients } = data;
+    // Cargar datos
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                const [policiesData, leadsData, clientsData] = await Promise.all([
+                    getPolicies(),
+                    getLeads(),
+                    getClients()
+                ]);
+
+                setPolicies(policiesData);
+                setLeads(leadsData);
+                setClients(clientsData);
+            } catch (err: any) {
+                setError(err.message);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
 
   // Calcular estadísticas enfocadas en cobranza y renovaciones
   const stats: DashboardStats = {
@@ -184,7 +214,26 @@ export const Dashboard: React.FC = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => refresh()}
+                  onClick={() => {
+                    setIsLoading(true);
+                    const fetchData = async () => {
+                      try {
+                        const [policiesData, leadsData, clientsData] = await Promise.all([
+                          getPolicies(),
+                          getLeads(),
+                          getClients()
+                        ]);
+                        setPolicies(policiesData);
+                        setLeads(leadsData);
+                        setClients(clientsData);
+                      } catch (err: any) {
+                        setError(err.message);
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    };
+                    fetchData();
+                  }}
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Actualizar

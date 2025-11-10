@@ -67,11 +67,7 @@ export const exampleClients: Client[] = [
 ];
 
 // Funciones para conectar con Supabase
-// Cache para optimizar consultas de clientes
-let clientsCache: { data: Client[]; timestamp: number } | null = null;
-const CLIENTS_CACHE_DURATION = 3 * 60 * 1000; // 3 minutos para clientes (menos crítico)
-
-export const getClients = async (forceRefresh: boolean = false): Promise<Client[]> => {
+export const getClients = async (): Promise<Client[]> => {
     try {
         // Verificar si las credenciales están configuradas
         if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
@@ -79,31 +75,24 @@ export const getClients = async (forceRefresh: boolean = false): Promise<Client[
             return exampleClients;
         }
 
-        // Verificar cache si no se fuerza refresh
-        if (!forceRefresh && clientsCache && (Date.now() - clientsCache.timestamp) < CLIENTS_CACHE_DURATION) {
-            console.log('Clients: Usando datos del cache');
-            return clientsCache.data;
-        }
-
-        // Obtener clientes desde Supabase (consulta optimizada)
+        // Obtener clientes desde Supabase
         const { data, error } = await supabase
             .from('clients')
             .select('*')
             .order('created_at', { ascending: false })
-            .limit(500); // Limitar para rendimiento
+            .limit(50);
 
         if (error) {
-            console.error('Error fetching clients from Supabase:', error);
+            console.error('Error fetching clients:', error);
             return exampleClients;
         }
 
         if (!data || data.length === 0) {
-            console.log('No clients found in database, using example clients');
             return exampleClients;
         }
 
-        // Mapear los datos de Supabase al tipo Client
-        const mappedClients = data.map(client => ({
+        // Mapear datos básicos
+        return data.map(client => ({
             id: client.id,
             internal_id: client.internal_id || `CLI${client.id.slice(-3)}`,
             name: client.name,
@@ -124,53 +113,10 @@ export const getClients = async (forceRefresh: boolean = false): Promise<Client[
             preferredPaymentMethod: client.preferred_payment_method || 'card',
             paymentFrequency: client.payment_frequency || 'monthly'
         }));
-
-        // Guardar en cache
-        clientsCache = {
-            data: mappedClients,
-            timestamp: Date.now()
-        };
-
-        return mappedClients;
     } catch (error) {
         console.error('Error in getClients:', error);
         return exampleClients;
     }
-};
-
-// Función para obtener clientes básicos (solo para dashboard)
-export const getClientsBasic = async (): Promise<any[]> => {
-    try {
-        // Verificar cache primero
-        if (clientsCache && (Date.now() - clientsCache.timestamp) < CLIENTS_CACHE_DURATION) {
-            return clientsCache.data.map(c => ({
-                id: c.id,
-                name: c.name,
-                status: c.status,
-                policyCount: c.policyCount
-            }));
-        }
-
-        const { data, error } = await supabase
-            .from('clients')
-            .select('id, name, status, policy_count')
-            .limit(500);
-
-        if (error) {
-            console.error('Error fetching basic clients:', error);
-            return [];
-        }
-
-        return data || [];
-    } catch (error) {
-        console.error('Error in getClientsBasic:', error);
-        return [];
-    }
-};
-
-// Función para invalidar cache de clientes
-export const invalidateClientsCache = () => {
-    clientsCache = null;
 };
 
 export const createClient = async (clientData: Omit<Client, 'id' | 'internal_id' | 'policyCount' | 'lastInteraction' | 'nextRenewal' | 'alerts'>): Promise<Client> => {

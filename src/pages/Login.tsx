@@ -1,100 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Briefcase, Building2, Wifi, WifiOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { Mail, Lock, Building2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const navigate = useNavigate();
-  const { signIn, error: authError } = useAuth();
-
-  // Verificar conexión a Supabase al cargar el componente
-  useEffect(() => {
-    const checkConnection = async () => {
-      try {
-        const hasCredentials = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-        if (!hasCredentials) {
-          setConnectionStatus('offline');
-          return;
-        }
-
-        // Intentar una consulta simple para verificar conexión
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/profiles?select=id&limit=1`, {
-          headers: {
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-          }
-        });
-
-        if (response.ok) {
-          setConnectionStatus('online');
-        } else {
-          setConnectionStatus('offline');
-        }
-      } catch (error) {
-        console.error('Error checking connection:', error);
-        setConnectionStatus('offline');
-      }
-    };
-
-    checkConnection();
-  }, []);
+  const { signIn } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!email.trim() || !password) {
-      setError('Por favor ingresa email y contraseña');
-      return;
-    }
-
+    setError('');
     setIsLoading(true);
-    setError(null);
 
     try {
-      console.log('Login: Intentando iniciar sesión...');
-      await signIn(email.trim(), password);
-      console.log('Login: Inicio de sesión exitoso, redirigiendo...');
+      await signIn(email, password);
       navigate('/');
     } catch (err: any) {
-      console.error('Login: Error durante inicio de sesión:', err);
-      setError(err.message || 'Ocurrió un error al iniciar sesión. Verifica tus credenciales.');
+      setError(err.message || 'Error al iniciar sesión');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Mostrar error del contexto de autenticación
-  const displayError = authError || error;
-
-  // Función para obtener el indicador de conexión
-  const getConnectionIndicator = () => {
-    switch (connectionStatus) {
-      case 'online':
-        return (
-          <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400 text-sm">
-            <CheckCircle className="w-4 h-4" />
-            <span>Conectado</span>
-          </div>
-        );
-      case 'offline':
-        return (
-          <div className="flex items-center justify-center gap-2 text-orange-600 dark:text-orange-400 text-sm">
-            <WifiOff className="w-4 h-4" />
-            <span>Modo sin conexión</span>
-          </div>
-        );
-      default:
-        return (
-          <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
-            <Wifi className="w-4 h-4 animate-pulse" />
-            <span>Verificando conexión...</span>
-          </div>
-        );
     }
   };
 
@@ -104,12 +32,11 @@ const Login: React.FC = () => {
         <div className="text-center">
           <Building2 className="mx-auto h-12 w-auto text-primary" />
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-            Bienvenido a AgentBooster
+            AgentBooster CRM
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-            Inicia sesión para continuar
+            Sistema de gestión para agentes de seguros
           </p>
-          {getConnectionIndicator()}
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
@@ -148,11 +75,11 @@ const Login: React.FC = () => {
             </div>
           </div>
 
-          {displayError && (
+          {error && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
               <div className="flex items-center gap-2 text-red-800 dark:text-red-200">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <p className="text-sm">{displayError}</p>
+                <p className="text-sm">{error}</p>
               </div>
             </div>
           )}
