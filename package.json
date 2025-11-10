@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test:db": "node scripts/test-database-integrity.js",
-    "test:user-isolation": "node scripts/test-user-isolation.js"
+    "test:user-isolation": "node scripts/test-user-isolation.js",
+    "fix:profiles": "node scripts/fix-missing-profiles.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",
