@@ -120,13 +120,47 @@ npm run dev
 - **Autenticación automática** en desarrollo
 - **Funciona en**: http://localhost:5173
 
-### 🔧 Configuración Avanzada (Opcional)
+### 🔧 Configuración con Supabase (Requerido para Datos Reales)
 
-Para usar con base de datos real, crear archivo `.env`:
+⚠️ **IMPORTANTE**: Para que los datos se guarden y persistan correctamente entre usuarios, DEBES configurar Supabase.
+
+#### Paso 1: Crear archivo `.env` en la raíz del proyecto
+
 ```env
 VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
-VITE_SUPABASE_ANON_KEY=tu-clave-anonima
+VITE_SUPABASE_ANON_KEY=tu-clave-anonima-de-supabase
 ```
+
+#### Paso 2: Obtener credenciales de Supabase
+
+1. Ve a [https://supabase.com/dashboard](https://supabase.com/dashboard)
+2. Crea un nuevo proyecto (o selecciona uno existente)
+3. Ve a **Settings** → **API**
+4. Copia:
+   - **URL del proyecto**: `VITE_SUPABASE_URL`
+   - **anon public key**: `VITE_SUPABASE_ANON_KEY`
+
+#### Paso 3: Ejecutar migraciones
+
+```bash
+# Conecta con tu proyecto de Supabase
+npx supabase link --project-ref TU_PROJECT_REF
+
+# Aplica las migraciones
+npx supabase db push
+```
+
+O directamente en el dashboard de Supabase:
+1. Ve a **SQL Editor**
+2. Ejecuta los archivos en `supabase/migrations/` en orden
+
+#### Paso 4: Reiniciar la aplicación
+
+```bash
+npm run dev
+```
+
+✅ **Ahora cada usuario verá y guardará SOLO sus propios datos**
 
 ## 📁 Estructura del Proyecto
 
@@ -181,13 +215,31 @@ src/
 - Campos de alertas
 - Roles de contactos
 
-## 🔐 Seguridad
+## 🔐 Seguridad y Aislamiento de Datos
 
-- **Row Level Security** (RLS) en Supabase
-- **Autenticación JWT**
-- **Validación de formularios**
-- **Sanitización de datos CSV**
-- **Protección de rutas**
+### Row Level Security (RLS)
+✅ **Cada usuario ve SOLO sus propios datos**
+- Las políticas RLS filtran automáticamente por `user_id`
+- Protección a nivel de base de datos (PostgreSQL)
+- Imposible ver datos de otros usuarios
+
+### Validaciones
+- **Autenticación JWT** con Supabase Auth
+- **Validación de formularios** con React Hook Form
+- **Sanitización de CSV** en importaciones
+- **Protección de rutas** con ProtectedRoute
+
+### Auditoría
+Ver `AUDIT_REPORT.md` para:
+- Análisis de seguridad completo
+- Validación de aislamiento de datos
+- Tests de integridad
+
+### Testing
+```bash
+# Validar que RLS funciona correctamente
+npm run test:user-isolation
+```
 
 ## 📈 Métricas y Analytics
 
@@ -258,10 +310,31 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
    npm run dev
    ```
 
-### ✅ Modo Desarrollo
+### ✅ Modo Desarrollo (Sin Supabase)
 - **Login**: Cualquier email funciona (ej: `test@test.com`)
 - **Contraseña**: Cualquier contraseña funciona
 - **Datos**: Se usan ejemplos incluidos
+- ⚠️ **Los datos NO se guardan** (solo visualización)
+
+### 🔒 Modo Producción (Con Supabase)
+- **Login**: Solo usuarios registrados en Supabase
+- **Registro**: Crear cuenta en `/signup`
+- **Datos**: Se guardan en base de datos real
+- ✅ **Persistencia garantizada**
+- ✅ **Aislamiento por usuario**
+
+### 🔍 Auditoría y Validación
+
+```bash
+# Validar que los datos se guardan correctamente
+npm run test:user-isolation
+
+# Ver reporte de auditoría
+cat AUDIT_REPORT.md
+
+# Documentación de integración MCP
+cat MCP_INTEGRATION.md
+```
 
 ## 📞 Soporte
 

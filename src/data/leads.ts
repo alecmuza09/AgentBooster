@@ -14,15 +14,24 @@ export const getLeads = async (): Promise<Lead[]> => {
             return mockLeads;
         }
 
+        // Obtener el usuario autenticado
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+            console.warn('Leads: Usuario no autenticado, usando datos mock');
+            return mockLeads;
+        }
+
         // Timeout para evitar esperas infinitas
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 segundos max
 
         try {
-            // Obtener leads desde Supabase con timeout
+            // Obtener leads desde Supabase con timeout y filtro por usuario
             const { data, error } = await supabase
                 .from('leads')
                 .select('*')
+                .eq('user_id', user.id)
                 .order('created_at', { ascending: false })
                 .limit(30)
                 .abortSignal(controller.signal);
@@ -89,9 +98,17 @@ export const createLead = async (leadData: LeadData): Promise<Lead> => {
             return mockLead;
         }
 
+        // Obtener el usuario autenticado
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+            throw new Error('Usuario no autenticado');
+        }
+
         const { data, error } = await supabase
             .from('leads')
             .insert({
+                user_id: user.id,
                 name: leadData.name,
                 email: leadData.email,
                 phone: leadData.phone,

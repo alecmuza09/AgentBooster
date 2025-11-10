@@ -178,15 +178,25 @@ export const getPolicies = async (): Promise<Policy[]> => {
             return examplePolicies;
         }
 
+        // Obtener el usuario autenticado
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+            console.warn('Policies: Usuario no autenticado, usando datos mock');
+            return examplePolicies;
+        }
+
         // Timeout para evitar esperas infinitas
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 segundos max
 
         try {
-            // Obtener pólizas desde Supabase con timeout
+            // Obtener pólizas desde Supabase con timeout y filtro por usuario
             const { data, error } = await supabase
                 .from('policies')
                 .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
                 .limit(50)
                 .abortSignal(controller.signal);
 
