@@ -14,35 +14,53 @@ export const getLeads = async (): Promise<Lead[]> => {
             return mockLeads;
         }
 
-        const { data, error } = await supabase
-            .from('leads')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(50);
+        // Timeout para evitar esperas infinitas
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 segundos max
 
-        if (error) {
-            console.error('Error fetching leads:', error);
+        try {
+            // Obtener leads desde Supabase con timeout
+            const { data, error } = await supabase
+                .from('leads')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(30)
+                .abortSignal(controller.signal);
+
+            clearTimeout(timeoutId);
+
+            if (error) {
+                console.error('Error fetching leads:', error);
+                return mockLeads;
+            }
+
+            if (!data || data.length === 0) {
+                return mockLeads;
+            }
+
+            // Mapear datos básicos
+            return data.map(d => ({
+                id: d.id,
+                name: d.name,
+                email: d.email,
+                phone: d.phone,
+                status: d.status,
+                source: d.source,
+                potentialValue: d.potential_value,
+                lastContactedDate: d.last_contacted_date,
+                createdAt: d.created_at,
+                statusUpdatedAt: d.status_updated_at,
+                notes: d.notes,
+            })) as Lead[];
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                console.warn('Leads: Timeout fetching data, using mock data');
+            } else {
+                console.error('Error in getLeads:', error);
+            }
             return mockLeads;
         }
-
-        if (!data || data.length === 0) {
-            return mockLeads;
-        }
-
-        // Mapear datos básicos
-        return data.map(d => ({
-            id: d.id,
-            name: d.name,
-            email: d.email,
-            phone: d.phone,
-            status: d.status,
-            source: d.source,
-            potentialValue: d.potential_value,
-            lastContactedDate: d.last_contacted_date,
-            createdAt: d.created_at,
-            statusUpdatedAt: d.status_updated_at,
-            notes: d.notes,
-        })) as Lead[];
     } catch (error) {
         console.error('Error in getLeads:', error);
         return mockLeads;

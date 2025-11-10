@@ -31,13 +31,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
+    // Si ya hay un usuario, no hacer nada
+    if (user) {
+      if (isMounted) setLoading(false);
+      return;
+    }
+
     // Timeout de seguridad para evitar loading infinito
     const timeoutId = setTimeout(() => {
-      if (loading) {
+      if (loading && isMounted) {
         console.warn('AuthContext: Timeout en carga, usando modo desarrollo');
-        setLoading(false);
+        // Simular usuario autenticado para desarrollo
+        const mockUser = {
+          id: 'dev-user-123',
+          email: 'usuario@desarrollo.com',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          aud: 'authenticated',
+          role: 'authenticated'
+        } as User;
+
+        if (isMounted) {
+          setUser(mockUser);
+          setProfile({
+            id: mockUser.id,
+            full_name: 'Usuario Desarrollo',
+            avatar_url: null,
+            cedula_type: null,
+            cedula_expiration_date: null,
+            agencia: 'Desarrollo'
+          });
+          setLoading(false);
+        }
       }
-    }, 3000); // 3 segundos de timeout
+    }, 2000); // 2 segundos de timeout
 
     // Verificar si las credenciales están configuradas
     const hasCredentials = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -54,23 +83,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: 'authenticated'
       } as User;
 
-      setUser(mockUser);
-      setProfile({
-        id: mockUser.id,
-        full_name: 'Usuario Desarrollo',
-        avatar_url: null,
-        cedula_type: null,
-        cedula_expiration_date: null,
-        agencia: 'Desarrollo'
-      });
-      setLoading(false);
-      clearTimeout(timeoutId);
+      if (isMounted) {
+        setUser(mockUser);
+        setProfile({
+          id: mockUser.id,
+          full_name: 'Usuario Desarrollo',
+          avatar_url: null,
+          cedula_type: null,
+          cedula_expiration_date: null,
+          agencia: 'Desarrollo'
+        });
+        setLoading(false);
+        clearTimeout(timeoutId);
+      }
       return;
     }
 
-    // Verificar sesión existente con Supabase
+    // Verificar sesión existente con Supabase (solo si no hay usuario)
     console.log('AuthContext: Verificando sesión existente...');
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+
       if (session?.user) {
         console.log('AuthContext: Sesión encontrada:', session.user.email);
         setUser(session.user);
@@ -81,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       clearTimeout(timeoutId);
     }).catch((error) => {
+      if (!isMounted) return;
       console.error('AuthContext: Error verificando sesión:', error);
       setLoading(false);
       clearTimeout(timeoutId);
@@ -88,6 +122,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listener de cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!isMounted) return;
+
       console.log('Auth state changed:', session?.user?.email || 'logout');
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -98,10 +134,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
       clearTimeout(timeoutId);
     };
-  }, []);
+  }, [user]); // Agregar user como dependencia
 
   const loadUserProfile = async (userId: string) => {
     try {

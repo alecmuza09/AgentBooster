@@ -71,48 +71,65 @@ export const getClients = async (): Promise<Client[]> => {
     try {
         // Verificar si las credenciales están configuradas
         if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-            console.warn('Supabase credentials not configured. Using example clients.');
+            console.warn('Clients: Credenciales no configuradas, usando datos mock');
             return exampleClients;
         }
 
-        // Obtener clientes desde Supabase
-        const { data, error } = await supabase
-            .from('clients')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(50);
+        // Timeout para evitar esperas infinitas
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 segundos max
 
-        if (error) {
-            console.error('Error fetching clients:', error);
+        try {
+            // Obtener clientes desde Supabase con timeout
+            const { data, error } = await supabase
+                .from('clients')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(30)
+                .abortSignal(controller.signal);
+
+            clearTimeout(timeoutId);
+
+            if (error) {
+                console.error('Error fetching clients:', error);
+                return exampleClients;
+            }
+
+            if (!data || data.length === 0) {
+                return exampleClients;
+            }
+
+            // Mapear datos básicos
+            return data.map(client => ({
+                id: client.id,
+                internal_id: client.internal_id || `CLI${client.id.slice(-3)}`,
+                name: client.name,
+                rfc: client.rfc,
+                email: client.email,
+                phone: client.phone,
+                status: client.status || 'active',
+                policyCount: client.policy_count || 0,
+                lastInteraction: client.last_interaction ? new Date(client.last_interaction) : new Date(),
+                nextRenewal: client.next_renewal ? new Date(client.next_renewal) : undefined,
+                assignedAdvisor: client.assigned_advisor,
+                insuranceCompany: client.insurance_company || '-',
+                alerts: {
+                    pendingPayments: client.alerts?.pending_payments || false,
+                    expiredDocs: client.alerts?.expired_docs || false,
+                    homonym: client.alerts?.homonym || false
+                },
+                preferredPaymentMethod: client.preferred_payment_method || 'card',
+                paymentFrequency: client.payment_frequency || 'monthly'
+            }));
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                console.warn('Clients: Timeout fetching data, using mock data');
+            } else {
+                console.error('Error in getClients:', error);
+            }
             return exampleClients;
         }
-
-        if (!data || data.length === 0) {
-            return exampleClients;
-        }
-
-        // Mapear datos básicos
-        return data.map(client => ({
-            id: client.id,
-            internal_id: client.internal_id || `CLI${client.id.slice(-3)}`,
-            name: client.name,
-            rfc: client.rfc,
-            email: client.email,
-            phone: client.phone,
-            status: client.status || 'active',
-            policyCount: client.policy_count || 0,
-            lastInteraction: client.last_interaction ? new Date(client.last_interaction) : new Date(),
-            nextRenewal: client.next_renewal ? new Date(client.next_renewal) : undefined,
-            assignedAdvisor: client.assigned_advisor,
-            insuranceCompany: client.insurance_company || '-',
-            alerts: {
-                pendingPayments: client.alerts?.pending_payments || false,
-                expiredDocs: client.alerts?.expired_docs || false,
-                homonym: client.alerts?.homonym || false
-            },
-            preferredPaymentMethod: client.preferred_payment_method || 'card',
-            paymentFrequency: client.payment_frequency || 'monthly'
-        }));
     } catch (error) {
         console.error('Error in getClients:', error);
         return exampleClients;

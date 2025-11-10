@@ -178,86 +178,78 @@ export const getPolicies = async (): Promise<Policy[]> => {
             return examplePolicies;
         }
 
-        // Obtener pólizas desde Supabase
-        const { data, error } = await supabase
-            .from('policies')
-            .select('*')
-            .limit(100);
+        // Timeout para evitar esperas infinitas
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 segundos max
 
-        if (error) {
-            console.error('Error fetching policies:', error);
+        try {
+            // Obtener pólizas desde Supabase con timeout
+            const { data, error } = await supabase
+                .from('policies')
+                .select('*')
+                .limit(50)
+                .abortSignal(controller.signal);
+
+            clearTimeout(timeoutId);
+
+            if (error) {
+                console.error('Error fetching policies:', error);
+                return examplePolicies;
+            }
+
+            if (!data || data.length === 0) {
+                return examplePolicies;
+            }
+
+            // Para las primeras 10 pólizas, obtener datos relacionados (limitado para rendimiento)
+            const policies: Policy[] = data.slice(0, 10).map((p) => ({
+                id: p.id,
+                policyNumber: p.policy_number || 'N/A',
+                ramo: p.ramo || 'N/A',
+                aseguradora: p.aseguradora || 'N/A',
+                status: p.status || 'active',
+                formaDePago: p.forma_de_pago || 'Mensual',
+                conductoDePago: p.conducto_de_pago || 'Tarjeta',
+                moneda: p.moneda || 'MXN',
+                primaNeta: p.prima_neta || 0,
+                total: p.total || 0,
+                sumaAsegurada: p.suma_asegurada || 0,
+                fechaVigenciaInicial: p.fecha_vigencia_inicial || '',
+                fechaVigenciaFinal: p.fecha_vigencia_final || '',
+                fechaPagoActual: p.fecha_pago_actual,
+                vigenciaPeriodo: {
+                    inicio: p.vigencia_periodo_inicio || '',
+                    fin: p.vigencia_periodo_fin || ''
+                },
+                vigenciaTotal: {
+                    inicio: p.vigencia_total_inicio || '',
+                    fin: p.vigencia_total_fin || ''
+                },
+                terminoPagos: p.termino_pagos,
+                contratante: { nombre: 'N/A', rfc: '', direccion: '', telefono: '' },
+                asegurado: { nombre: 'N/A', rfc: '', direccion: '', telefono: '' },
+                dueñoFinal: undefined,
+                contactoPago: { nombre: 'N/A', rfc: '', direccion: '', telefono: '' },
+                documents: [],
+                documentsAttached: false,
+                hasPendingPayment: false,
+                comentarios: p.comentarios,
+                comprobantePagoPath: p.comprobante_pago_path,
+                requiereComprobante: p.requiere_comprobante || false,
+                ultimaAlertaEnviada: p.ultima_alerta_enviada,
+                proximoPagoEsperado: p.proximo_pago_esperado,
+            }));
+
+            return policies;
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                console.warn('Policies: Timeout fetching data, using mock data');
+            } else {
+                console.error('Error in getPolicies:', error);
+            }
             return examplePolicies;
         }
-
-        if (!data || data.length === 0) {
-            return examplePolicies;
-        }
-
-        // Para cada póliza, obtener contactos y documentos (simplificado)
-        const policies: Policy[] = await Promise.all(
-            data.map(async (p) => {
-                try {
-                    // Obtener contactos
-                    const { data: contacts } = await supabase
-                        .from('policy_contacts')
-                        .select('*')
-                        .eq('policy_id', p.id);
-
-                    // Obtener documentos
-                    const { data: documents } = await supabase
-                        .from('policy_documents')
-                        .select('*')
-                        .eq('policy_id', p.id);
-
-                    // Mapear datos básicos
-                    const contratante = contacts?.find(c => c.role === 'contratante');
-                    const asegurado = contacts?.find(c => c.role === 'asegurado');
-
-                    return {
-                        id: p.id,
-                        policyNumber: p.policy_number || 'N/A',
-                        ramo: p.ramo || 'N/A',
-                        aseguradora: p.aseguradora || 'N/A',
-                        status: p.status || 'active',
-                        formaDePago: p.forma_de_pago || 'Mensual',
-                        conductoDePago: p.conducto_de_pago || 'Tarjeta',
-                        moneda: p.moneda || 'MXN',
-                        primaNeta: p.prima_neta || 0,
-                        total: p.total || 0,
-                        sumaAsegurada: p.suma_asegurada || 0,
-                        fechaVigenciaInicial: p.fecha_vigencia_inicial || '',
-                        fechaVigenciaFinal: p.fecha_vigencia_final || '',
-                        fechaPagoActual: p.fecha_pago_actual,
-                        vigenciaPeriodo: {
-                            inicio: p.vigencia_periodo_inicio || '',
-                            fin: p.vigencia_periodo_fin || ''
-                        },
-                        vigenciaTotal: {
-                            inicio: p.vigencia_total_inicio || '',
-                            fin: p.vigencia_total_fin || ''
-                        },
-                        terminoPagos: p.termino_pagos,
-                        contratante: contratante || { nombre: 'N/A', rfc: '', direccion: '', telefono: '' },
-                        asegurado: asegurado || { nombre: 'N/A', rfc: '', direccion: '', telefono: '' },
-                        dueñoFinal: undefined,
-                        contactoPago: { nombre: 'N/A', rfc: '', direccion: '', telefono: '' },
-                        documents: documents || [],
-                        documentsAttached: (documents?.length || 0) > 0,
-                        hasPendingPayment: false,
-                        comentarios: p.comentarios,
-                        comprobantePagoPath: p.comprobante_pago_path,
-                        requiereComprobante: p.requiere_comprobante || false,
-                        ultimaAlertaEnviada: p.ultima_alerta_enviada,
-                        proximoPagoEsperado: p.proximo_pago_esperado,
-                    } as Policy;
-                } catch (error) {
-                    console.error('Error processing policy', p.id, error);
-                    return examplePolicies[0]; // Retornar ejemplo básico
-                }
-            })
-        );
-
-        return policies;
     } catch (error) {
         console.error('Error in getPolicies:', error);
         return examplePolicies;
