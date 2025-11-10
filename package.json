@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:db": "node scripts/test-database-integrity.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",

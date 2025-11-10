@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,9 +8,9 @@ import { Separator } from '@/components/ui/separator';
 import { PaymentAlertSystem } from '@/components/PaymentAlertSystem';
 import { RenewalAlertSystem } from '@/components/RenewalAlertSystem';
 import {
-  TrendingUp, 
-  FileText, 
-  DollarSign, 
+  TrendingUp,
+  FileText,
+  DollarSign,
   Target,
   Calendar,
   Clock,
@@ -24,11 +24,7 @@ import {
   Building2,
   Bell
 } from 'lucide-react';
-import { Policy } from '@/types/policy';
-import { getPolicies } from '@/data/policies';
-import { getLeads } from '@/data/leads';
-import { getClients } from '@/data/clients';
-import { updatePolicyStatuses } from '@/utils/paymentUtils';
+import { useDashboardData } from '@/hooks/useDashboardData';
 import { differenceInDays, parseISO, addDays } from 'date-fns';
 
 interface DashboardStats {
@@ -55,41 +51,9 @@ interface QuickAction {
 
 export const Dashboard: React.FC = () => {
     const navigate = useNavigate();
-    const [policies, setPolicies] = useState<Policy[]>([]);
-    const [leads, setLeads] = useState<any[]>([]);
-    const [clients, setClients] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { data, isLoading, error, refresh, lastUpdated } = useDashboardData();
 
-
-  // Cargar datos
-    useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                // Cargar datos desde Supabase en paralelo
-                const [policiesData, leadsData, clientsData] = await Promise.all([
-                    getPolicies(),
-                    getLeads(),
-                    getClients()
-                ]);
-                
-                setPolicies(policiesData);
-                setLeads(leadsData);
-                setClients(clientsData);
-                
-                // Actualizar estados de pólizas
-                const updatedPolicies = updatePolicyStatuses(policiesData);
-                setPolicies(updatedPolicies);
-            } catch (err: any) {
-                setError(err.message);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchData();
-    }, []);
+    const { policies, leads, clients } = data;
 
   // Calcular estadísticas enfocadas en cobranza y renovaciones
   const stats: DashboardStats = {
@@ -99,19 +63,19 @@ export const Dashboard: React.FC = () => {
     conversionRate: leads.length > 0 ? (clients.length / leads.length) * 100 : 0,
     monthlyRevenue: policies.reduce((sum, p) => sum + (p.total || 0), 0),
     pendingRenewals: policies.filter(p => {
-      if (!p.fechaVigenciaFinal) return false;
+      if (!p.fecha_vigencia_final) return false;
       const today = new Date();
-      const expirationDate = parseISO(p.fechaVigenciaFinal);
+      const expirationDate = parseISO(p.fecha_vigencia_final);
       const daysUntilExpiration = differenceInDays(expirationDate, today);
       return daysUntilExpiration <= 30 && daysUntilExpiration >= 0;
     }).length,
     overduePayments: policies.filter(p => {
-      if (!p.fechaPagoActual) return false;
+      if (!p.fecha_pago_actual) return false;
       const today = new Date();
-      const lastPayment = parseISO(p.fechaPagoActual);
-      const frequencyDays = p.formaDePago === 'Mensual' ? 30 : 
-                           p.formaDePago === 'Trimestral' ? 90 :
-                           p.formaDePago === 'Semestral' ? 180 : 365;
+      const lastPayment = parseISO(p.fecha_pago_actual);
+      const frequencyDays = p.forma_de_pago === 'Mensual' ? 30 :
+                           p.forma_de_pago === 'Trimestral' ? 90 :
+                           p.forma_de_pago === 'Semestral' ? 180 : 365;
       const nextPaymentDate = addDays(lastPayment, frequencyDays);
       return differenceInDays(today, nextPaymentDate) > 0;
     }).length,
@@ -217,24 +181,10 @@ export const Dashboard: React.FC = () => {
                                 </p>
                             </div>
               <div className="flex items-center gap-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setIsLoading(true);
-                    const fetchData = async () => {
-                      try {
-                        const policiesData = await getPolicies();
-                        const updatedPolicies = updatePolicyStatuses(policiesData);
-                        setPolicies(updatedPolicies);
-                      } catch (err: any) {
-                        setError(err.message);
-                      } finally {
-                        setIsLoading(false);
-                      }
-                    };
-                    fetchData();
-                  }}
+                  onClick={() => refresh()}
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Actualizar

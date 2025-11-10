@@ -4,18 +4,32 @@ import { subDays, formatISO } from 'date-fns';
 
 const now = new Date();
 
-export const getLeads = async (): Promise<Lead[]> => {
+// Cache para optimizar consultas de leads
+let leadsCache: { data: Lead[]; timestamp: number } | null = null;
+const LEADS_CACHE_DURATION = 2 * 60 * 1000; // 2 minutos para leads (actualización frecuente)
+
+export const getLeads = async (forceRefresh: boolean = false): Promise<Lead[]> => {
     try {
         console.log('Leads: Intentando obtener leads desde Supabase...');
-        
+
         // Verificar si las credenciales están configuradas
         if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
             console.warn('Leads: Credenciales de Supabase no configuradas, usando datos mock');
             return mockLeads;
         }
 
-        const { data, error } = await supabase.from('leads').select('*');
-        
+        // Verificar cache si no se fuerza refresh
+        if (!forceRefresh && leadsCache && (Date.now() - leadsCache.timestamp) < LEADS_CACHE_DURATION) {
+            console.log('Leads: Usando datos del cache');
+            return leadsCache.data;
+        }
+
+        const { data, error } = await supabase
+            .from('leads')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(300); // Limitar para rendimiento
+
         if (error) {
             console.error('Leads: Error obteniendo leads desde Supabase:', error);
             console.log('Leads: Usando datos mock debido a error');
@@ -28,9 +42,9 @@ export const getLeads = async (): Promise<Lead[]> => {
         }
 
         console.log('Leads: Datos obtenidos exitosamente:', data.length);
-        
+
         // Mapea los campos de snake_case a camelCase
-        return data.map(d => ({
+        const mappedLeads = data.map(d => ({
             id: d.id,
             name: d.name,
             email: d.email,
@@ -43,11 +57,56 @@ export const getLeads = async (): Promise<Lead[]> => {
             statusUpdatedAt: d.status_updated_at,
             notes: d.notes,
         })) as Lead[];
+
+        // Guardar en cache
+        leadsCache = {
+            data: mappedLeads,
+            timestamp: Date.now()
+        };
+
+        return mappedLeads;
     } catch (error) {
         console.error('Leads: Error inesperado:', error);
         console.log('Leads: Usando datos mock debido a error inesperado');
         return mockLeads;
     }
+};
+
+// Función para obtener leads básicos (solo para dashboard)
+export const getLeadsBasic = async (): Promise<any[]> => {
+    try {
+        // Verificar cache primero
+        if (leadsCache && (Date.now() - leadsCache.timestamp) < LEADS_CACHE_DURATION) {
+            return leadsCache.data.map(l => ({
+                id: l.id,
+                name: l.name,
+                status: l.status,
+                source: l.source,
+                potentialValue: l.potentialValue
+            }));
+        }
+
+        const { data, error } = await supabase
+            .from('leads')
+            .select('id, name, status, source, potential_value')
+            .order('created_at', { ascending: false })
+            .limit(300);
+
+        if (error) {
+            console.error('Error fetching basic leads:', error);
+            return [];
+        }
+
+        return data || [];
+    } catch (error) {
+        console.error('Error in getLeadsBasic:', error);
+        return [];
+    }
+};
+
+// Función para invalidar cache de leads
+export const invalidateLeadsCache = () => {
+    leadsCache = null;
 };
 
 export const createLead = async (leadData: LeadData): Promise<Lead> => {

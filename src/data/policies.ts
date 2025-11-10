@@ -170,20 +170,32 @@ export const examplePolicies: Policy[] = [
 export type PolicyStatus = 'active' | 'pending' | 'expired' | 'cancelled';
 export type InsuranceType = 'Vida' | 'Gastos Médicos' | 'Auto' | 'Hogar' | 'Otro'; 
 
-export const getPolicies = async (): Promise<Policy[]> => {
+// Cache para optimizar consultas
+let policiesCache: { data: Policy[]; timestamp: number } | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
+// Función optimizada para obtener pólizas con mejor rendimiento
+export const getPolicies = async (forceRefresh: boolean = false): Promise<Policy[]> => {
     try {
         console.log('Policies: Intentando obtener pólizas desde Supabase...');
-        
+
         // Verificar si las credenciales están configuradas
         if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
             console.warn('Policies: Credenciales de Supabase no configuradas, usando datos mock');
             return examplePolicies;
         }
-        
-        // 1. Obtener todas las pólizas
+
+        // Verificar cache si no se fuerza refresh
+        if (!forceRefresh && policiesCache && (Date.now() - policiesCache.timestamp) < CACHE_DURATION) {
+            console.log('Policies: Usando datos del cache');
+            return policiesCache.data;
+        }
+
+        // 1. Obtener pólizas básicas (consulta optimizada)
         const { data: policiesData, error: policiesError } = await supabase
             .from('policies')
-            .select('*');
+            .select('*')
+            .limit(1000); // Limitar para evitar consultas muy grandes
 
         if (policiesError) {
             console.error('Policies: Error obteniendo pólizas desde Supabase:', policiesError);
@@ -199,134 +211,174 @@ export const getPolicies = async (): Promise<Policy[]> => {
             return examplePolicies;
         }
 
-        // 2. Para cada póliza, obtener sus datos relacionados
-        const policies: Policy[] = await Promise.all(
-            policiesData.map(async (p) => {
-                try {
-                    // Obtener contactos
-                    const { data: contactsData, error: contactsError } = await supabase
-                        .from('policy_contacts')
-                        .select('*')
-                        .eq('policy_id', p.id);
-                    if (contactsError) console.error('Error fetching contacts for policy', p.id, contactsError);
-                    
-                    // Obtener documentos y sus versiones
-                    const { data: documentsData, error: documentsError } = await supabase
-                        .from('policy_documents')
-                        .select(`*, versions:policy_document_versions(*)`)
-                        .eq('policy_id', p.id);
-                    if (documentsError) console.error('Error fetching documents for policy', p.id, documentsError);
-                    
-                    // Mapear los datos al tipo `Policy`
-                    const contratante = contactsData?.find(c => c.role === 'contratante');
-                    const asegurado = contactsData?.find(c => c.role === 'asegurado');
-                    const dueñoFinal = contactsData?.find(c => c.role === 'dueñoFinal');
-                    const contactoPago = contactsData?.find(c => c.role === 'contactoPago');
+        // 2. Obtener todos los contactos y documentos en consultas optimizadas (en paralelo)
+        const policyIds = policiesData.map(p => p.id);
 
-                    const mappedPolicy = {
-                        id: p.id,
-                        policyNumber: p.policy_number || 'N/A',
-                        inciso: p.inciso ?? undefined,
-                        concepto: p.concepto ?? undefined,
-                        modelo: p.modelo ?? undefined,
-                        numeroSerie: p.numero_serie ?? undefined,
-                        clienteId: p.cliente_id ?? undefined,
-                        claveAgente: p.clave_agente ?? undefined,
-                        ramo: p.ramo || 'N/A',
-                        subproducto: p.subproducto,
-                        aseguradora: p.aseguradora || 'N/A',
-                        status: p.status || 'active',
-                        formaDePago: p.forma_de_pago || 'Mensual',
-                        conductoDePago: p.conducto_de_pago || 'Tarjeta',
-                        moneda: p.moneda || 'MXN',
-                        primaNeta: p.prima_neta || 0,
-                        derecho: p.derecho || 0,
-                        recargo: p.recargo || 0,
-                        total: p.total || 0,
-                        tipoDeCargo: p.tipo_de_cargo ?? undefined,
-                        sumaAsegurada: p.suma_asegurada || 0,
-                        
-                        // 5 fechas clave de la póliza
-                        fechaSolicitud: p.fecha_solicitud ?? undefined,
-                        fechaVigenciaInicial: p.fecha_vigencia_inicial || '',
-                        fechaVigenciaFinal: p.fecha_vigencia_final || '',
-                        fechaEmision: p.fecha_emision ?? undefined,
-                        fechaPrimerPago: p.fecha_primer_pago ?? undefined,
-                        
-                        // Fechas adicionales para compatibilidad
-                        fechaRegistro: p.fecha_registro ?? undefined,
-                        fechaPagoActual: p.fecha_pago_actual,
-                        vigenciaPeriodo: { 
-                            inicio: p.vigencia_periodo_inicio || '', 
-                            fin: p.vigencia_periodo_fin || '' 
-                        },
-                        vigenciaTotal: { 
-                            inicio: p.vigencia_total_inicio || '', 
-                            fin: p.vigencia_total_fin || '' 
-                        },
-                        terminoPagos: p.termino_pagos,
-                        contratante: contratante || { nombre: 'N/A', rfc: '', direccion: '', telefono: '' },
-                        asegurado: asegurado || { nombre: 'N/A', rfc: '', direccion: '', telefono: '' },
-                        dueñoFinal: dueñoFinal,
-                        contactoPago: contactoPago || { nombre: 'N/A', rfc: '', direccion: '', telefono: '' },
-                        documents: documentsData || [],
-                        documentsAttached: (documentsData?.length || 0) > 0,
-                        hasPendingPayment: false, // Lógica a implementar
-                        comentarios: p.comentarios,
-                        comprobantePagoPath: p.comprobante_pago_path,
-                        requiereComprobante: p.requiere_comprobante || false,
-                        ultimaAlertaEnviada: p.ultima_alerta_enviada,
-                        proximoPagoEsperado: p.proximo_pago_esperado,
-                    } as Policy;
+        const [contactsResult, documentsResult] = await Promise.all([
+            // Obtener todos los contactos de una vez
+            supabase
+                .from('policy_contacts')
+                .select('*')
+                .in('policy_id', policyIds),
+            // Obtener todos los documentos de una vez
+            supabase
+                .from('policy_documents')
+                .select(`*, versions:policy_document_versions(*)`)
+                .in('policy_id', policyIds)
+        ]);
 
-                    console.log('Mapped policy:', mappedPolicy);
-                    return mappedPolicy;
-                } catch (error) {
-                    console.error('Error processing policy', p.id, error);
-                    // Si hay error procesando una póliza individual, devolver un objeto básico
-                    return {
-                        id: p.id,
-                        policyNumber: p.policy_number || 'N/A',
-                        inciso: p.inciso ?? undefined,
-                        concepto: p.concepto ?? undefined,
-                        modelo: p.modelo ?? undefined,
-                        numeroSerie: p.numero_serie ?? undefined,
-                        clienteId: p.cliente_id ?? undefined,
-                        claveAgente: p.clave_agente ?? undefined,
-                        ramo: p.ramo || 'N/A',
-                        aseguradora: p.aseguradora || 'N/A',
-                        status: p.status || 'active',
-                        formaDePago: p.forma_de_pago || 'Mensual',
-                        conductoDePago: p.conducto_de_pago || 'Tarjeta',
-                        moneda: p.moneda || 'MXN',
-                        sumaAsegurada: p.suma_asegurada || 0,
-                        primaNeta: p.prima_neta || 0,
-                        derecho: p.derecho || 0,
-                        recargo: p.recargo || 0,
-                        total: p.total || 0,
-                        fechaPagoActual: p.fecha_pago_actual,
-                        vigenciaPeriodo: { inicio: p.vigencia_periodo_inicio || '', fin: p.vigencia_periodo_fin || '' },
-                        vigenciaTotal: { inicio: p.vigencia_total_inicio || '', fin: p.vigencia_total_fin || '' },
-                        terminoPagos: p.termino_pagos,
-                        contratante: { nombre: 'N/A', rfc: '', direccion: '', telefono: '' },
-                        asegurado: { nombre: 'N/A', rfc: '', direccion: '', telefono: '' },
-                        dueñoFinal: undefined,
-                        contactoPago: { nombre: 'N/A', rfc: '', direccion: '', telefono: '' },
-                        documents: [],
-                        documentsAttached: false,
-                        hasPendingPayment: false,
-                    } as Policy;
-                }
-            })
-        );
+        if (contactsResult.error) {
+            console.error('Error fetching contacts:', contactsResult.error);
+        }
 
-        console.log('Final processed policies:', policies);
+        if (documentsResult.error) {
+            console.error('Error fetching documents:', documentsResult.error);
+        }
+
+        // Crear mapas para acceso rápido
+        const contactsMap = new Map<string, any[]>();
+        const documentsMap = new Map<string, any[]>();
+
+        // Agrupar contactos por policy_id
+        (contactsResult.data || []).forEach(contact => {
+            if (!contactsMap.has(contact.policy_id)) {
+                contactsMap.set(contact.policy_id, []);
+            }
+            contactsMap.get(contact.policy_id)!.push(contact);
+        });
+
+        // Agrupar documentos por policy_id
+        (documentsResult.data || []).forEach(document => {
+            if (!documentsMap.has(document.policy_id)) {
+                documentsMap.set(document.policy_id, []);
+            }
+            documentsMap.get(document.policy_id)!.push(document);
+        });
+
+        // 3. Mapear los datos usando los mapas (sin consultas adicionales)
+        const policies: Policy[] = policiesData.map((p) => {
+            const contactsData = contactsMap.get(p.id) || [];
+            const documentsData = documentsMap.get(p.id) || [];
+
+            // Encontrar contactos por rol
+            const contratante = contactsData.find(c => c.role === 'contratante');
+            const asegurado = contactsData.find(c => c.role === 'asegurado');
+            const dueñoFinal = contactsData.find(c => c.role === 'dueñoFinal');
+            const contactoPago = contactsData.find(c => c.role === 'contactoPago');
+
+            const mappedPolicy: Policy = {
+                id: p.id,
+                policyNumber: p.policy_number || 'N/A',
+                inciso: p.inciso ?? undefined,
+                concepto: p.concepto ?? undefined,
+                modelo: p.modelo ?? undefined,
+                numeroSerie: p.numero_serie ?? undefined,
+                clienteId: p.cliente_id ?? undefined,
+                claveAgente: p.clave_agente ?? undefined,
+                ramo: p.ramo || 'N/A',
+                subproducto: p.subproducto,
+                aseguradora: p.aseguradora || 'N/A',
+                status: p.status || 'active',
+                formaDePago: p.forma_de_pago || 'Mensual',
+                conductoDePago: p.conducto_de_pago || 'Tarjeta',
+                moneda: p.moneda || 'MXN',
+                primaNeta: p.prima_neta || 0,
+                derecho: p.derecho || 0,
+                recargo: p.recargo || 0,
+                total: p.total || 0,
+                tipoDeCargo: p.tipo_de_cargo ?? undefined,
+                sumaAsegurada: p.suma_asegurada || 0,
+
+                // 5 fechas clave de la póliza
+                fechaSolicitud: p.fecha_solicitud ?? undefined,
+                fechaVigenciaInicial: p.fecha_vigencia_inicial || '',
+                fechaVigenciaFinal: p.fecha_vigencia_final || '',
+                fechaEmision: p.fecha_emision ?? undefined,
+                fechaPrimerPago: p.fecha_primer_pago ?? undefined,
+
+                // Fechas adicionales para compatibilidad
+                fechaRegistro: p.fecha_registro ?? undefined,
+                fechaPagoActual: p.fecha_pago_actual,
+                vigenciaPeriodo: {
+                    inicio: p.vigencia_periodo_inicio || '',
+                    fin: p.vigencia_periodo_fin || ''
+                },
+                vigenciaTotal: {
+                    inicio: p.vigencia_total_inicio || '',
+                    fin: p.vigencia_total_fin || ''
+                },
+                terminoPagos: p.termino_pagos,
+                contratante: contratante || { nombre: 'N/A', rfc: '', direccion: '', telefono: '' },
+                asegurado: asegurado || { nombre: 'N/A', rfc: '', direccion: '', telefono: '' },
+                dueñoFinal: dueñoFinal,
+                contactoPago: contactoPago || { nombre: 'N/A', rfc: '', direccion: '', telefono: '' },
+                documents: documentsData || [],
+                documentsAttached: (documentsData?.length || 0) > 0,
+                hasPendingPayment: false, // Lógica a implementar
+                comentarios: p.comentarios,
+                comprobantePagoPath: p.comprobante_pago_path,
+                requiereComprobante: p.requiere_comprobante || false,
+                ultimaAlertaEnviada: p.ultima_alerta_enviada,
+                proximoPagoEsperado: p.proximo_pago_esperado,
+            };
+
+            return mappedPolicy;
+        });
+
+        console.log('Final processed policies:', policies.length);
+
+        // Guardar en cache
+        policiesCache = {
+            data: policies,
+            timestamp: Date.now()
+        };
+
         return policies;
     } catch (error) {
         console.error('Error in getPolicies:', error);
         console.log('Falling back to example policies due to error');
         return examplePolicies;
     }
+};
+
+// Función para obtener pólizas básicas (solo para dashboard, sin datos relacionados)
+export const getPoliciesBasic = async (): Promise<any[]> => {
+    try {
+        // Verificar cache primero
+        if (policiesCache && (Date.now() - policiesCache.timestamp) < CACHE_DURATION) {
+            return policiesCache.data.map(p => ({
+                id: p.id,
+                policyNumber: p.policyNumber,
+                ramo: p.ramo,
+                aseguradora: p.aseguradora,
+                status: p.status,
+                total: p.total,
+                fechaVigenciaFinal: p.fechaVigenciaFinal,
+                fechaPagoActual: p.fechaPagoActual,
+                formaDePago: p.formaDePago
+            }));
+        }
+
+        const { data, error } = await supabase
+            .from('policies')
+            .select('id, policy_number, ramo, aseguradora, status, total, fecha_vigencia_final, fecha_pago_actual, forma_de_pago')
+            .limit(1000);
+
+        if (error) {
+            console.error('Error fetching basic policies:', error);
+            return [];
+        }
+
+        return data || [];
+    } catch (error) {
+        console.error('Error in getPoliciesBasic:', error);
+        return [];
+    }
+};
+
+// Función para invalidar cache
+export const invalidatePoliciesCache = () => {
+    policiesCache = null;
 };
 
 export const createPolicy = async (policyData: Omit<Policy, 'id' | 'documents' | 'documentsAttached' | 'hasPendingPayment'>): Promise<Policy> => {
