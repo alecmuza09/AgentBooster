@@ -1,16 +1,16 @@
-# 🚀 AgentBooster - CRM Integral para Agentes de Seguros
+# 🚀 AgentBooster - CRM para Agentes de Seguros
 
 ## 📋 Descripción
 
-AgentBooster es una plataforma CRM moderna y completa diseñada específicamente para agentes de seguros. Ofrece gestión integral de leads, pólizas, reportes, finanzas personales y aprendizaje continuo.
+AgentBooster es una plataforma CRM moderna diseñada para agentes de seguros. Gestiona leads, pólizas, clientes y reportes de manera eficiente.
 
-## ⚡ **ACTUALIZACIÓN RECIENTE** - Rendimiento +50%, Autenticación Corregida
+## ✅ **Estado Actual**: Funcional y Simplificado
 
-**Última versión**: v2.0.0 - Optimización completa
-- ✅ **Rendimiento**: +50% más rápido (de 10s a 2s carga)
-- ✅ **Autenticación**: Corregida completamente
-- ✅ **Base de datos**: Optimizada con triggers automáticos
-- ✅ **Cache inteligente**: Consultas 94% más eficientes
+**Versión**: v1.0.0 - Versión estable
+- ✅ **Funciona localmente** sin configuración
+- ✅ **Compatible con Supabase** cuando está disponible
+- ✅ **Autenticación automática** en modo desarrollo
+- ✅ **Interfaz moderna** y responsiva
 
 ## ✨ Características Principales
 
@@ -65,33 +65,12 @@ AgentBooster es una plataforma CRM moderna y completa diseñada específicamente
 - **Exportación de datos**
 
 ### 🔧 Funcionalidades Técnicas
-- **Importación CSV** con validación completa
-- **Base de datos Supabase** con PostgreSQL
-- **Autenticación inteligente** con indicadores de estado
-- **Cache inteligente** con invalidación automática
-- **Consultas optimizadas** N+1 eliminadas
-- **Modo oscuro/claro** completo
-- **Diseño responsive** para todos los dispositivos
-- **TypeScript** para type safety
-
-### ⚡ Optimizaciones de Rendimiento
-
-#### Cache Inteligente
-- **Pólizas**: 5 minutos de cache
-- **Clientes**: 3 minutos de cache
-- **Leads**: 2 minutos de cache
-- **Invalidación automática** al actualizar
-
-#### Consultas Optimizadas
-- **Antes**: 50+ consultas individuales (lento)
-- **Ahora**: 3 consultas paralelas (94% menos)
-- **Tiempo de carga**: De 10-15s → 2-3s
-
-#### Autenticación Mejorada
-- **Indicadores de conexión** en tiempo real
-- **Modo desarrollo** sin configuración
-- **Modo producción** con Supabase
-- **Manejo de errores** específico y claro
+- **Interfaz moderna** con Tailwind CSS
+- **Base de datos Supabase** (opcional)
+- **Autenticación automática** en desarrollo
+- **Datos de ejemplo** incluidos
+- **Modo responsive** para móviles
+- **TypeScript** para desarrollo seguro
 
 ## 🛠️ Tecnologías Utilizadas
 
@@ -118,67 +97,35 @@ AgentBooster es una plataforma CRM moderna y completa diseñada específicamente
 - **date-fns** para manejo de fechas
 - **clsx** para clases condicionales
 
-## 🚀 Instalación y Configuración
+## 🚀 Instalación Rápida
 
-### Prerrequisitos
-- Node.js 18+
-- npm o yarn
-- Cuenta de Supabase (opcional para desarrollo)
-
-### 📦 Instalación Rápida
+### ⚡ **3 pasos para empezar**
 
 ```bash
-# 1. Clonar repositorio
+# 1. Clonar el repositorio
 git clone https://github.com/alecmuza09/AgentBooster.git
 cd AgentBooster
 
 # 2. Instalar dependencias
 npm install
 
-# 3. Ejecutar en modo desarrollo (funciona sin configuración)
+# 3. Ejecutar la aplicación
 npm run dev
 ```
 
-### ⚙️ Configuración Avanzada (Opcional)
+### ✅ **¡Listo!** La aplicación funciona inmediatamente
 
-#### Variables de Entorno
-Crear archivo `.env` en la raíz:
+- **Sin configuración** necesaria
+- **Datos de ejemplo** incluidos
+- **Autenticación automática** en desarrollo
+- **Funciona en**: http://localhost:5173
+
+### 🔧 Configuración Avanzada (Opcional)
+
+Para usar con base de datos real, crear archivo `.env`:
 ```env
 VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
 VITE_SUPABASE_ANON_KEY=tu-clave-anonima
-```
-
-#### Base de Datos Supabase
-```bash
-# Instalar Supabase CLI
-npm install -g supabase
-
-# Aplicar migraciones optimizadas
-supabase db push
-
-# Verificar integridad
-npm run test:db
-```
-
-### 🎯 Modos de Uso
-
-#### Modo Desarrollo (Sin Supabase)
-```bash
-npm run dev
-# ✅ Funciona inmediatamente
-# ✅ Datos mock incluidos
-# ✅ Autenticación mock
-```
-
-#### Modo Producción (Con Supabase)
-```bash
-# 1. Configurar .env
-# 2. Crear usuarios en Supabase Dashboard
-# 3. Aplicar migraciones
-supabase db push
-
-# 4. Ejecutar
-npm run dev
 ```
 
 ## 📁 Estructura del Proyecto
@@ -287,47 +234,34 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 
 ## 🔧 Solución de Problemas
 
-### Problema: "Se queda cargando la aplicación"
-**Solución**: La aplicación ahora tiene indicadores de carga. Si se queda cargando:
-1. Verifica la consola del navegador (F12)
-2. Busca errores de red o conexión
-3. En modo desarrollo, cualquier login funciona
+### 🚨 Si algo no funciona:
 
-### Problema: "Error de autenticación"
-**Solución**:
-- **Modo desarrollo**: Cualquier email/contraseña funciona
-- **Modo Supabase**: Verifica credenciales en `.env`
-- **Usuario no existe**: Crea usuario en Supabase Dashboard
+1. **Reinicia la aplicación**:
+   ```bash
+   # Detener (Ctrl+C) y volver a ejecutar
+   npm run dev
+   ```
 
-### Problema: "Datos no se cargan"
-**Solución**:
-- Verifica conexión a Supabase
-- Ejecuta `npm run test:db` para verificar integridad
-- En desarrollo usa datos mock automáticamente
+2. **Limpia cache del navegador**:
+   - Presiona `Ctrl+Shift+R` (o `Cmd+Shift+R` en Mac)
+   - O abre DevTools (F12) → Network → Disable cache
 
-### Problema: "Lento rendimiento"
-**Solución**: Las optimizaciones ya están aplicadas:
-- Cache inteligente activado
-- Consultas optimizadas
-- Carga progresiva implementada
+3. **Verifica la consola**:
+   - Abre DevTools (F12) → Console
+   - Busca mensajes de error en rojo
 
-### Comandos Útiles
-```bash
-# Verificar estado del proyecto
-npm run test:db
+4. **Si nada funciona**:
+   ```bash
+   # Borra node_modules y reinstala
+   rm -rf node_modules package-lock.json
+   npm install
+   npm run dev
+   ```
 
-# Limpiar cache de desarrollo
-npm run dev -- --force
-
-# Ver logs detallados
-npm run dev 2>&1 | tee debug.log
-```
-
-## 📚 Documentación Adicional
-
-- 📖 **[Guía de Autenticación](AUTENTICACION_README.md)** - Detalles completos sobre login
-- 🗄️ **[Integridad BD](DATABASE_INTEGRITY_README.md)** - Optimizaciones de base de datos
-- 🧪 **[Testing](scripts/test-database-integrity.js)** - Verificación automática
+### ✅ Modo Desarrollo
+- **Login**: Cualquier email funciona (ej: `test@test.com`)
+- **Contraseña**: Cualquier contraseña funciona
+- **Datos**: Se usan ejemplos incluidos
 
 ## 📞 Soporte
 
